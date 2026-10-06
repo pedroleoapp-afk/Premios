@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unicoins — Balcão de prêmios</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%AA%99%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EAF0F7; --surface:#FFFFFF; --surface2:#F3F6FB; --ink:#10233A; --muted:#5B6B80; --line:#D3DCE8;
+  --blue:#1B5FD1; --blue-ink:#FFFFFF; --gold:#E8B21E; --gold-deep:#9A6C00;
+  --fin:#0F7F73; --fin-soft:#DDF2EF; --chat:#5B3FC4; --chat-soft:#E9E4FB;
+  --ok:#1E8A4C; --bad:#C2372F; --shadow:0 1px 0 rgba(16,35,58,.06),0 6px 18px -10px rgba(16,35,58,.25);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1524; --surface:#132238; --surface2:#182A44; --ink:#E7EEF7; --muted:#9AAAC0; --line:#24395A;
+    --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550;
+    --ok:#4CC27F; --bad:#F07067; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.7); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1524; --surface:#132238; --surface2:#182A44; --ink:#E7EEF7; --muted:#9AAAC0; --line:#24395A;
+  --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550;
+  --ok:#4CC27F; --bad:#F07067; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.7); color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100%}
+h1,h2,h3{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;line-height:1.1;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 18px 64px}
+
+/* Coin */
+.coin{display:inline-grid;place-items:center;width:1.15em;height:1.15em;border-radius:50%;vertical-align:-.18em;
+  background:radial-gradient(circle at 34% 28%,#FFF0B0 0,#F5C93B 38%,#E0A713 70%,#A87905 100%);
+  box-shadow:inset 0 0 0 .07em #C38F0E,inset 0 0 0 .14em #F7D763;color:#6F4D00;font:800 .62em/1 "Bricolage Grotesque",sans-serif}
+.coin.big{width:120px;height:120px;font-size:64px;box-shadow:inset 0 0 0 6px #C38F0E,inset 0 0 0 12px #F7D763,0 18px 30px -16px rgba(154,108,0,.8)}
+@media (prefers-reduced-motion:no-preference){
+  .coin.big.spin{animation:flip 1.1s cubic-bezier(.2,.7,.2,1) 1}
+  @keyframes flip{0%{transform:rotateY(0) scale(.85)}70%{transform:rotateY(720deg) scale(1.04)}100%{transform:rotateY(720deg) scale(1)}}
+}
+
+/* Top bar */
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand h1{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.brand .coin{font-size:30px}
+.role{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
+nav.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;overflow-x:auto}
+nav.tabs:empty{display:none}
+nav.tabs button{border:0;background:none;padding:8px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink)}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px 26px;margin-bottom:26px;box-shadow:var(--shadow);perspective:600px}
+.hero .amount{font:800 clamp(48px,9vw,84px)/.95 "Bricolage Grotesque",sans-serif;letter-spacing:-.03em}
+.hero .label{color:var(--muted);margin-top:6px}
+.sector-tag{display:inline-block;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px}
+.sector-tag.fin{background:var(--fin-soft);color:var(--fin)}
+.sector-tag.chat{background:var(--chat-soft);color:var(--chat)}
+.sector-tag.ambos{background:var(--surface2);color:var(--muted)}
+@media (max-width:560px){.hero{grid-template-columns:1fr;text-align:left}.coin.big{width:84px;height:84px;font-size:44px}}
+
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
+.section-head h2{font-size:24px;font-weight:700}
+.hint{color:var(--muted);font-size:14px}
+
+/* Ticket cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.ticket{--notch:calc(100% - 66px);position:relative;background:var(--surface);border-radius:16px;display:flex;flex-direction:column;min-height:220px;filter:drop-shadow(0 6px 10px rgba(16,35,58,.10));
+  -webkit-mask:radial-gradient(circle 10px at 0 var(--notch),#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle 10px at 100% var(--notch),#0000 97%,#000) right/51% 100% no-repeat;
+  mask:radial-gradient(circle 10px at 0 var(--notch),#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle 10px at 100% var(--notch),#0000 97%,#000) right/51% 100% no-repeat}
+.ticket .body{padding:18px 18px 12px;flex:1}
+.ticket .emoji{font-size:34px;line-height:1}
+.ticket h3{font-size:19px;font-weight:700;margin:10px 0 4px}
+.ticket p{margin:0;color:var(--muted);font-size:14px}
+.ticket .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;font-size:12px}
+.ticket .stub{height:66px;border-top:2px dashed var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 18px;gap:10px}
+.price{font:800 24px/1 "Bricolage Grotesque",sans-serif;display:flex;align-items:center;gap:6px}
+.ticket.off{opacity:.55}
+
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;background:var(--blue);color:var(--blue-ink)}
+.btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed}
+.btn.ghost{background:var(--surface2);color:var(--ink)}
+.btn.warn{background:var(--gold);color:#3E2C00}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.bad{background:none;color:var(--bad);border:1px solid currentColor}
+.btn.sm{padding:6px 10px;font-size:14px}
+
+/* Panels & lists */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.cols{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+.panel h3{font-size:18px;margin-bottom:12px}
+label.f{display:block;font-size:14px;font-weight:600;margin:10px 0 4px}
+.in{width:100%;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 11px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > *{flex:1 1 120px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:12px;align-items:center;padding:12px 2px;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:0}
+.list .grow{flex:1;min-width:0}
+.list .t{font-weight:600}
+.list .s{color:var(--muted);font-size:13px}
+.plus{color:var(--ok);font-weight:700}.minus{color:var(--bad);font-weight:700}
+.status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.status.pendente{background:#FFF1C9;color:#7A5600}
+.status.entregue{background:#D7F1E2;color:#145C34}
+.status.recusada{background:#F9DEDB;color:#8A231D}
+.status.aprovada{background:#D7F1E2;color:#145C34}
+.reward{font:800 22px/1 "Bricolage Grotesque",sans-serif;display:flex;align-items:center;gap:6px;color:var(--ok)}
+.tform{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.proof{width:72px;height:52px;border-radius:8px;object-fit:cover;cursor:zoom-in;border:1px solid var(--line);flex:none;padding:0;background:none}
+.proof img{width:100%;height:100%;object-fit:cover;border-radius:7px;display:block}
+.subitem{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:14px 2px;border-bottom:1px solid var(--line)}
+.subitem:last-child{border-bottom:0}
+.subitem .note{background:var(--surface2);border-radius:8px;padding:8px 10px;font-size:14px;margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere}
+.lb{position:fixed;inset:0;background:rgba(5,12,22,.82);display:grid;place-items:center;z-index:20;padding:24px;cursor:zoom-out}
+.lb img{max-width:100%;max-height:90vh;border-radius:12px}
+.subnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.subnav button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:600}
+.subnav button[aria-current="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.count{background:var(--gold);color:#3E2C00;border-radius:999px;padding:0 7px;margin-left:6px;font-size:12px}
+.empty{color:var(--muted);padding:22px 4px;text-align:center}
+.rank{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.pos{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--surface2);flex:none}
+.pos.p1{background:var(--gold);color:#3E2C00}
+.slot{display:flex;align-items:center;gap:12px;padding:12px;border:1px dashed var(--line);border-radius:12px;margin-bottom:10px}
+.slot b{font-family:"Bricolage Grotesque",sans-serif}
+.notice{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px;text-align:center;max-width:560px;margin:40px auto}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.choose button{border:2px solid var(--line);background:var(--surface2);border-radius:14px;padding:22px 12px;cursor:pointer;font:700 18px "Bricolage Grotesque",sans-serif}
+.choose button.fin:hover,.choose button.fin:focus-visible{border-color:var(--fin)}
+.choose button.chat:hover,.choose button.chat:focus-visible{border-color:var(--chat)}
+@media (max-width:480px){.choose{grid-template-columns:1fr}}
+.joinform{text-align:left;margin-top:18px}
+.choose button[aria-pressed="true"].fin{border-color:var(--fin);background:var(--fin-soft);color:var(--fin)}
+.choose button[aria-pressed="true"].chat{border-color:var(--chat);background:var(--chat-soft);color:var(--chat)}
+.ticket .pic{aspect-ratio:16/10;background:var(--surface2);overflow:hidden}
+.ticket .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.imgpick{display:flex;gap:12px;align-items:center}
+.thumb{width:96px;height:60px;border-radius:10px;border:1px dashed var(--line);background:var(--surface2);display:grid;place-items:center;font-size:12px;color:var(--muted);overflow:hidden;flex:none}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.mini{width:48px;height:32px;border-radius:6px;object-fit:cover;flex:none}
+.auth{max-width:420px;margin:28px auto;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:var(--shadow)}
+.auth h2{font-size:26px;margin:16px 0 6px}
+.linkbtn{background:none;border:0;padding:0;color:var(--blue);font-weight:600;cursor:pointer;text-decoration:underline}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:18px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.setup{background:#FFF1C9;color:#5A4000;border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:14px}
+.setup code{background:rgba(0,0,0,.08);padding:2px 6px;border-radius:6px;word-break:break-all}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:10;max-width:90vw}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.check{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="coin" aria-hidden="true">U</span><h1>Unicoins</h1></div>
+    <span class="role" id="role">Carregando…</span>
+    <button class="btn ghost sm" id="logout" hidden>Sair</button>
+    <nav class="tabs" id="tabs" aria-label="Seções"></nav>
+  </header>
+  <div id="setupBanner"></div>
+  <main id="main"><p class="hint">Abrindo o balcão de prêmios…</p></main>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module">
+/* =====================================================================
+   CONFIGURAÇÃO — preencha com os dados do seu projeto Firebase
+   (Console do Firebase › Configurações do projeto › Seus apps › Web)
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCLGvBZgq0BwY_Ph7UtXT5EVqUicphZPfI",
+  authDomain: "premios-82561.firebaseapp.com",
+  projectId: "premios-82561",
+  storageBucket: "premios-82561.firebasestorage.app",
+  messagingSenderId: "873110414678",
+  appId: "1:873110414678:web:442fdd7d76b201c62ce2f7",
+  measurementId: "G-P1980MEB5T"
+};
+/* UID da conta do administrador (o mesmo que vai no arquivo firestore.rules) */
+const ADMIN_UIDS = ["COLE_AQUI_SEU_UID"];
+/* Opcional: limitar cadastro a e-mails corporativos. Ex.: ["uniasselvi.com.br", "vitru.com.br"]. Vazio = qualquer e-mail. */
+const ALLOWED_EMAIL_DOMAINS = [];
+/* ===================================================================== */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, setDoc, updateDoc, deleteDoc, addDoc, runTransaction, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const SECT = { fin:{name:'Financeiro'}, chat:{name:'Chat Uniasselvi'}, ambos:{name:'Ambos os setores'} };
+const S = { db:null, user:null, me:null, owner:false, cfg:{supervisors:[null,null,null]}, items:[], players:{}, reds:[], ledger:[],
+  names:{}, pendingNames:new Set(), tab:'loja', sub:'tarefas', preview:'fin', editing:null, busy:false, confirmId:null, searchHits:[], tasks:[], subs:[], openTask:null, draft:{note:'',image:null}, editingTask:null, reasons:{}, loaded:false, joinSector:null, formImg:null };
+
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number(n||0).toLocaleString('pt-BR');
+const when = t => t ? new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+const coin = '<span class="coin" aria-hidden="true">U</span>';
+const isSup = () => S.owner || (S.me && (S.cfg.supervisors||[]).includes(S.me));
+const me = () => S.mine;
+const nm = id => (S.players[id] && S.players[id].name) || S.names[id] || (id === S.me ? 'Você' : 'Colaborador');
+const safeImg = v => typeof v === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) ? v : null;
+let toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3200); }
+
+/* ---------- Firebase ---------- */
+const configured = !String(FIREBASE_CONFIG.apiKey).startsWith('COLE');
+let fdb = null, auth = null;
+const P = path => path.split('/');
+/* Pequeno adaptador para manter o restante do código simples */
+const wrap = s => ({ id:s.id, exists:s.exists(), data:() => s.data() });
+const dbApi = {
+  doc: path => { const r = doc(fdb, ...P(path)); return { id:r.id, ref:r, get:() => getDoc(r).then(wrap), set:v => setDoc(r, v), update:v => updateDoc(r, v), delete:() => deleteDoc(r) }; },
+  collection: path => { const c = collection(fdb, ...P(path)); return { doc:id => dbApi.doc(path + '/' + (id || doc(c).id)), add:v => addDoc(c, v) }; }
+};
+const now = () => Date.now();
+
+/* ---------- Boot ---------- */
+let base = [], live = [], liveKey = '';
+function stopAll(){ base.forEach(u => u()); live.forEach(u => u()); base = []; live = []; liveKey = ''; }
+function resetState(){ Object.assign(S, { me:null, owner:false, mine:null, gotCfg:false, gotMine:false, cfg:{supervisors:[null,null,null]}, items:[], players:{}, reds:[], ledger:[], tasks:[], subs:[], subsPend:[], subsRecent:[], proofs:{}, loaded:false, tab:'loja', sub:'tarefas', editing:null, editingTask:null, openTask:null }); }
+
+if (!configured) {
+  notice('Falta configurar o Firebase. Preencha FIREBASE_CONFIG no início do arquivo index.html.');
+} else {
+  const app = initializeApp(FIREBASE_CONFIG);
+  auth = getAuth(app); fdb = getFirestore(app); S.db = dbApi;
+  onAuthStateChanged(auth, u => {
+    stopAll(); resetState();
+    $('#logout').hidden = !u;
+    if (!u) return showLogin();
+    if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(d => (u.email||'').toLowerCase().endsWith('@' + d.toLowerCase()))) {
+      signOut(auth); return showLogin('Use seu e-mail corporativo (' + ALLOWED_EMAIL_DOMAINS.map(d => '@' + d).join(', ') + ').');
+    }
+    S.me = u.uid; S.owner = ADMIN_UIDS.includes(u.uid); S.email = u.email || '';
+    setupBanner();
+    $('#role').textContent = 'Carregando…'; $('#main').innerHTML = '<p class="hint">Abrindo o balcão de prêmios…</p>';
+    base.push(onSnapshot(doc(fdb, 'config', 'main'), s => { const d = s.exists() ? s.data() : {}; S.cfg = { supervisors:(d.supervisors || [null,null,null]).slice(0,3) }; S.gotCfg = true; resub(); changed(); }, onErr));
+    base.push(onSnapshot(doc(fdb, 'players', S.me), s => { S.mine = s.exists() ? { id:s.id, ...s.data() } : null; if (S.mine) S.players[S.me] = S.mine; S.gotMine = true; resub(); changed(); }, onErr));
+  });
+}
+
+function onErr(e){
+  console.error(e);
+  if (e && e.code === 'permission-denied') notice('O banco recusou o acesso. Confira se as regras do arquivo firestore.rules foram publicadas no Firebase e se o seu UID está nelas.');
+  else toast('Falha de conexão com o banco. Verifique a internet e recarregue a página.');
+}
+
+const list = (q, fn) => live.push(onSnapshot(q, snap => { fn(snap.docs.map(d => ({ id:d.id, ...d.data() }))); changed(); }, onErr));
+const byAtDesc = (a, b) => (b.at||0) - (a.at||0);
+function resub(){
+  if (!S.gotCfg || !S.gotMine) return;
+  const key = (isSup() ? 'sup' : 'col') + '|' + (S.mine ? S.mine.sector : '-');
+  if (key === liveKey) return;
+  live.forEach(u => u()); live = []; liveKey = key;
+  Object.assign(S, { items:[], players:S.mine ? { [S.me]:S.mine } : {}, reds:[], ledger:[], tasks:[], subs:[], subsPend:[], subsRecent:[] });
+  const C = n => collection(fdb, n);
+  const mergeSubs = () => { const m = new Map(); [...S.subsPend, ...S.subsRecent].forEach(x => m.set(x.id, x)); S.subs = [...m.values()].sort(byAtDesc); };
+  if (isSup()) {
+    list(C('players'), a => { const o = {}; a.forEach(p => o[p.id] = p); if (S.mine) o[S.me] = S.mine; S.players = o; });
+    list(C('items'), a => S.items = a);
+    list(C('tasks'), a => S.tasks = a);
+    list(query(C('redemptions'), where('status','==','pendente')), a => { S.redsPend = a; S.reds = [...a, ...(S.redsDone||[])].sort(byAtDesc); });
+    list(query(C('redemptions'), orderBy('at','desc'), limit(120)), a => { S.redsDone = a.filter(r => r.status !== 'pendente'); S.reds = [...(S.redsPend||[]), ...S.redsDone].sort(byAtDesc); });
+    list(query(C('ledger'), orderBy('at','desc'), limit(150)), a => S.ledger = a);
+    list(query(C('submissions'), where('status','==','pendente')), a => { S.subsPend = a; mergeSubs(); });
+    list(query(C('submissions'), orderBy('at','desc'), limit(60)), a => { S.subsRecent = a; mergeSubs(); });
+  } else if (S.mine) {
+    const sec = S.mine.sector;
+    list(query(C('players'), where('sector','==',sec)), a => { const o = {}; a.forEach(p => o[p.id] = p); o[S.me] = S.mine; S.players = o; });
+    list(query(C('items'), where('sector','in',['ambos',sec])), a => S.items = a);
+    list(query(C('tasks'), where('sector','in',['ambos',sec])), a => S.tasks = a);
+    list(query(C('redemptions'), where('player','==',S.me)), a => S.reds = a.sort(byAtDesc));
+    list(query(C('ledger'), where('player','==',S.me)), a => S.ledger = a.sort(byAtDesc));
+    list(query(C('submissions'), where('player','==',S.me)), a => { S.subsRecent = a; mergeSubs(); });
+  }
+  S.loaded = true; build();
+}
+
+function notice(msg){ $('#role').textContent='Unicoins'; $('#tabs').innerHTML=''; $('#main').innerHTML=`<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">${esc(msg)}</h2></div>`; }
+function setupBanner(){
+  const b = $('#setupBanner');
+  b.innerHTML = ADMIN_UIDS.some(x => x.startsWith('COLE')) && S.me ? `<div class="setup"><b>Configuração inicial:</b> o UID desta conta é <code id="myUid">${esc(S.me)}</code> <button class="btn ghost sm" id="copyUid">Copiar</button><br>Se esta é a conta do administrador, cole o UID em <code>ADMIN_UIDS</code> no index.html e no arquivo <code>firestore.rules</code>.</div>` : '';
+}
+
+/* ---------- Login ---------- */
+const AUTH_ERR = {
+  'auth/invalid-credential':'E-mail ou senha incorretos.', 'auth/wrong-password':'E-mail ou senha incorretos.', 'auth/user-not-found':'E-mail ou senha incorretos.',
+  'auth/email-already-in-use':'Este e-mail já tem conta. Use Entrar.', 'auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.',
+  'auth/invalid-email':'Digite um e-mail válido.', 'auth/missing-password':'Digite a senha.', 'auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.',
+  'auth/operation-not-allowed':'Este tipo de login não está ativado no Firebase (Authentication › Sign-in method).',
+  'auth/unauthorized-domain':'Este endereço não está autorizado. Adicione-o em Authentication › Settings › Authorized domains.',
+  'auth/network-request-failed':'Sem conexão. Verifique a internet.'
+};
+const authMsg = e => AUTH_ERR[e && e.code] || 'Não foi possível entrar. Tente de novo.';
+function showLogin(msg){
+  $('#role').textContent = 'Unicoins'; $('#tabs').innerHTML = ''; $('#setupBanner').innerHTML = '';
+  $('#main').innerHTML = `<div class="auth"><span class="coin big spin" aria-hidden="true">U</span>
+    <h2>Entre no balcão de prêmios</h2><p class="hint">Use seu e-mail. Na primeira vez, toque em Criar conta.</p>
+    <form id="loginForm" autocomplete="on">
+      <label class="f" for="lEmail">E-mail</label><input class="in" id="lEmail" type="email" autocomplete="email" required>
+      <label class="f" for="lPass">Senha</label><input class="in" id="lPass" type="password" autocomplete="current-password" minlength="6" required>
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" data-mode="in">Entrar</button><button class="btn ghost" type="submit" data-mode="up">Criar conta</button></div>
+      <p style="margin:12px 0 0"><button type="button" class="linkbtn" id="forgot">Esqueci minha senha</button></p>
+    </form>
+    <div class="or">ou</div><button class="btn ghost" id="google" style="width:100%">Entrar com Google</button></div>`;
+  if (msg) toast(msg);
+}
+
+const isEarnKind = k => k === 'credit' || k === 'bulk' || k === 'task';
+const bal = id => Number((S.players[id] && S.players[id].balance) || 0);
+const earned = id => Number((S.players[id] && S.players[id].earned) || 0);
+function avail(i){ return i.stock === null || i.stock === undefined ? null : Math.max(0, i.stock); }
+S.proofs = {}; S.proofLoading = new Set();
+
+let lastShape = '';
+function changed(){
+  if (!S.loaded) return;
+  const shape = [isSup(), !!me(), S.tab, S.sub].join('|');
+  if (shape !== lastShape) build(); else fill();
+}
+function requestNames(){}
+
+/* ---------- Layout ---------- */
+function tabsFor(){
+  let t = [['loja','Loja'],['tarefas','Tarefas'],['meus','Meus resgates'],['ranking','Ranking']];
+  if (isSup()) t.push(['sup','Supervisão']);
+  if (isSup() && !me()) t = t.filter(x => x[0] !== 'meus');
+  return t;
+}
+function build(){
+  lastShape = [isSup(), !!me(), S.tab, S.sub].join('|');
+  const sup = isSup(), p = me();
+  $('#role').textContent = S.owner ? 'Administrador' : sup ? 'Supervisão' : p ? (p.name||'Colaborador') + ' · ' + SECT[p.sector].name + (p.supRequest ? ' · supervisão aguardando liberação' : '') : 'Novo por aqui';
+  if (!sup && !p) {
+    $('#tabs').innerHTML = '';
+    $('#main').innerHTML = `<div class="notice"><span class="coin big spin" aria-hidden="true">U</span>
+      <h2 style="margin-top:18px">Cadastre-se para entrar na loja</h2>
+      <p class="hint">Seus Unicoins e os prêmios disponíveis dependem do setor. Só a supervisão pode mudar o setor depois.</p>
+      <form id="joinForm" class="joinform" autocomplete="off">
+        <label class="f" for="jName">Seu nome</label><input class="in" id="jName" required maxlength="60" placeholder="Nome e sobrenome">
+        <span class="f" style="display:block;font-size:14px;font-weight:600;margin:14px 0 0">Seu setor</span>
+        <div class="choose" style="margin-top:6px"><button type="button" class="fin" data-pick="fin" aria-pressed="${S.joinSector==='fin'}">Financeiro</button><button type="button" class="chat" data-pick="chat" aria-pressed="${S.joinSector==='chat'}">Chat Uniasselvi</button></div>
+        <label class="check"><input type="checkbox" id="jSup"> Faço parte da supervisão (o administrador precisa liberar)</label>
+        <button class="btn" type="submit" style="margin-top:18px;width:100%">Entrar na loja</button>
+      </form></div>`;
+    return;
+  }
+  const tabs = tabsFor();
+  if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
+  $('#tabs').innerHTML = tabs.map(([k,l]) => `<button data-tab="${k}" aria-current="${S.tab===k}">${l}${k==='sup' && supCount() ? ` <span class="count">${supCount()}</span>` : ''}</button>`).join('');
+  const M = $('#main');
+  if (S.tab === 'loja') M.innerHTML = `<div id="hero"></div>
+    <div class="section-head"><h2>Prêmios</h2><span class="hint" id="storeHint"></span></div><div id="previewNav"></div><div class="grid" id="store"></div>`;
+  if (S.tab === 'tarefas') M.innerHTML = `<div class="section-head"><h2>Tarefas</h2><span class="hint">Conclua e ganhe Unicoins. A supervisão confere antes de creditar.</span></div>
+    <div id="taskPrev"></div><div class="grid" id="tasks"></div>
+    ${p ? `<section class="panel" style="margin-top:24px"><h3>Minhas entregas</h3><ul class="list" id="mySubs"></ul></section>` : ''}`;
+  if (S.tab === 'meus') M.innerHTML = `<div class="cols"><section class="panel"><h3>Extrato</h3><ul class="list" id="myLedger"></ul></section>
+    <section class="panel"><h3>Meus resgates</h3><ul class="list" id="myReds"></ul></section></div>`;
+  if (S.tab === 'ranking') M.innerHTML = `<div class="section-head"><h2>Quem mais ganhou Unicoins</h2><span class="hint">Soma de tudo que foi creditado, sem descontar as trocas.</span></div><div class="rank" id="rank"></div>`;
+  if (S.tab === 'sup') buildSup();
+  fill();
+}
+
+function buildSup(){
+  const subs = [['tarefas','Tarefas'],['premios','Prêmios'],['moedas','Moedas'],['pedidos','Pedidos'],['acessos','Acessos']];
+  const M = $('#main');
+  let h = `<div class="subnav" id="subnav">${subs.map(([k,l]) => `<button data-sub="${k}" aria-current="${S.sub===k}">${l}${k==='pedidos'?'<span id="pc"></span>':''}${k==='tarefas'?'<span id="tc"></span>':''}${k==='acessos'?'<span id="ac"></span>':''}</button>`).join('')}</div>`;
+  if (S.sub === 'premios') h += `<div class="cols">
+    <form class="panel" id="itemForm" autocomplete="off"><h3 id="formTitle">Novo prêmio</h3>
+      <div class="row"><div style="flex:0 0 74px"><label class="f" for="fEmoji">Ícone</label><input class="in" id="fEmoji" maxlength="4" value="🎁"></div>
+      <div><label class="f" for="fName">Nome</label><input class="in" id="fName" maxlength="60" required placeholder="Ex.: Folga de 2 horas"></div></div>
+      <span class="f" style="display:block">Imagem</span>
+      <div class="imgpick"><div class="thumb" id="fThumb">Sem imagem</div><div class="row" style="gap:6px">
+        <input type="file" id="fImg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr"><label for="fImg" class="btn ghost sm" style="flex:none" tabindex="0" id="fImgBtn">Escolher imagem</label>
+        <button type="button" class="btn bad sm" id="fImgDel" style="flex:none" hidden>Remover</button></div></div>
+      <label class="f" for="fDesc">Descrição</label><textarea class="in" id="fDesc" rows="2" maxlength="160" placeholder="Como e quando o prêmio é entregue"></textarea>
+      <div class="row"><div><label class="f" for="fCost">Custo em Unicoins</label><input class="in" id="fCost" type="number" min="1" step="1" required></div>
+      <div><label class="f" for="fStock">Estoque</label><input class="in" id="fStock" type="number" min="0" step="1" placeholder="Sem limite"></div></div>
+      <label class="f" for="fSector">Disponível para</label><select class="in" id="fSector"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
+      <label class="check"><input type="checkbox" id="fActive" checked> Visível na loja</label>
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="fSave">Adicionar à loja</button><button class="btn ghost" type="button" id="fCancel" hidden>Cancelar edição</button></div>
+    </form>
+    <section class="panel"><h3>Itens da loja</h3><ul class="list" id="itemList"></ul></section></div>`;
+  if (S.sub === 'moedas') h += `<div class="cols"><div>
+    <form class="panel" id="coinForm"><h3>Ajustar um colaborador</h3>
+      <label class="f" for="cTarget">Colaborador</label><select class="in" id="cTarget" required></select>
+      <div class="row"><div><label class="f" for="cAmt">Unicoins</label><input class="in" id="cAmt" type="number" min="1" step="1" required></div></div>
+      <label class="f" for="cWhy">Motivo</label><input class="in" id="cWhy" maxlength="80" required placeholder="Ex.: Meta de NPS batida">
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" data-dir="1">Creditar</button><button class="btn ghost" type="submit" data-dir="-1">Debitar</button></div>
+    </form>
+    <form class="panel" id="bulkForm" style="margin-top:18px"><h3>Creditar um setor inteiro</h3>
+      <label class="f" for="bSector">Setor</label><select class="in" id="bSector"><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
+      <label class="f" for="bAmt">Unicoins por pessoa</label><input class="in" id="bAmt" type="number" min="1" step="1" required>
+      <label class="f" for="bWhy">Motivo</label><input class="in" id="bWhy" maxlength="80" required placeholder="Ex.: Campanha do mês">
+      <button class="btn warn" type="submit" style="margin-top:16px">Creditar setor</button>
+    </form></div>
+    <section class="panel"><h3>Colaboradores</h3><ul class="list" id="playerList"></ul><h3 style="margin-top:22px">Movimentações recentes</h3><ul class="list" id="ledgerList"></ul></section></div>`;
+  if (S.sub === 'tarefas') h += `<div class="cols">
+    <form class="panel" id="taskForm" autocomplete="off"><h3 id="tFormTitle">Nova tarefa</h3>
+      <label class="f" for="tTitle">Tarefa</label><input class="in" id="tTitle" maxlength="80" required placeholder="Ex.: Zerar fila de e-mails pendentes">
+      <label class="f" for="tDesc">Como fazer / o que conta</label><textarea class="in" id="tDesc" rows="3" maxlength="300" placeholder="Critérios para a tarefa ser aprovada"></textarea>
+      <div class="row"><div><label class="f" for="tReward">Recompensa (Unicoins)</label><input class="in" id="tReward" type="number" min="1" step="1" required></div>
+      <div><label class="f" for="tSector">Para</label><select class="in" id="tSector"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select></div></div>
+      <label class="check"><input type="checkbox" id="tProof"> Exigir comprovação (imagem ou texto)</label>
+      <label class="check"><input type="checkbox" id="tRepeat"> Pode ser feita mais de uma vez</label>
+      <label class="check"><input type="checkbox" id="tActive" checked> Visível para os colaboradores</label>
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="tSave">Publicar tarefa</button><button class="btn ghost" type="button" id="tCancel" hidden>Cancelar edição</button></div>
+    </form>
+    <section class="panel"><h3>Tarefas cadastradas</h3><ul class="list" id="taskList"></ul></section></div>
+    <div class="cols" style="margin-top:18px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+      <section class="panel"><h3>Entregas para conferir</h3><div id="subPend"></div></section>
+      <section class="panel"><h3>Histórico de entregas</h3><div id="subDone"></div></section></div>`;
+  if (S.sub === 'pedidos') h += `<div class="cols"><section class="panel"><h3>Aguardando entrega</h3><ul class="list" id="pendList"></ul></section>
+    <section class="panel"><h3>Histórico</h3><ul class="list" id="doneList"></ul></section></div>`;
+  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os 3 acessos de supervisão</h3>
+      <p class="hint" style="margin-top:-4px">Todos têm as mesmas permissões: gerenciar prêmios, moedas e pedidos.${S.owner?'':' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
+    ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
+      <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
+  M.innerHTML = h;
+}
+
+/* ---------- Fill (data-driven parts) ---------- */
+function subPending(){ return S.subs.filter(x => x.status === 'pendente').length; }
+function supCount(){ return pendingCount() + subPending(); }
+function pendingCount(){ return S.reds.filter(r => r.status === 'pendente').length; }
+function itemsFor(sector){ return S.items.filter(i => i.active !== false && (i.sector === 'ambos' || i.sector === sector)).sort((a,b)=>a.cost-b.cost); }
+
+function fill(){
+  if (!isSup() && !me()) return;
+  const tb = document.querySelector('[data-tab="sup"]');
+  if (tb) tb.innerHTML = 'Supervisão' + (supCount() ? ` <span class="count">${supCount()}</span>` : '');
+  if (S.tab === 'loja') fillStore();
+  if (S.tab === 'tarefas') keepFocus(fillTasks);
+  if (S.tab === 'meus') fillMine();
+  if (S.tab === 'ranking') fillRank();
+  if (S.tab === 'sup') keepFocus(fillSup);
+}
+function keepFocus(fn){
+  const a = document.activeElement, id = a && a.id, st = a && a.selectionStart, en = a && a.selectionEnd;
+  fn();
+  if (id && document.activeElement !== a) { const n = document.getElementById(id); if (n) { n.focus(); try { if (st != null) n.setSelectionRange(st, en); } catch(e){} } }
+}
+
+function fillStore(){
+  const p = me(), sup = isSup();
+  const sector = p && !sup ? p.sector : (p && sup && S.previewSet !== true ? p.sector : S.preview);
+  if (p) {
+    $('#hero').innerHTML = `<div class="hero"><span class="coin big ${S.spun?'':'spin'}" aria-hidden="true">U</span><div>
+      <div class="amount">${fmt(bal(S.me))}</div><div class="label">Unicoins para trocar · <span class="sector-tag ${p.sector}">${SECT[p.sector].name}</span></div></div></div>`;
+    S.spun = true;
+  } else $('#hero').innerHTML = '';
+  if (sup) $('#previewNav').innerHTML = `<div class="subnav">${['fin','chat'].map(k=>`<button data-prev="${k}" aria-current="${sector===k}">Loja ${SECT[k].name}</button>`).join('')}</div>`;
+  const list = itemsFor(sector);
+  $('#storeHint').textContent = sup && !p ? 'Visão da supervisão. Os colaboradores veem o mesmo, em tempo real.' : `${list.length} ${list.length===1?'prêmio disponível':'prêmios disponíveis'}`;
+  if (!list.length) { $('#store').innerHTML = `<p class="empty" style="grid-column:1/-1">${sup ? 'Nenhum prêmio para este setor. Adicione itens em Supervisão › Prêmios.' : 'A loja ainda está vazia. Os prêmios aparecem aqui assim que a supervisão cadastrar.'}</p>`; return; }
+  $('#store').innerHTML = list.map(i => {
+    const av = avail(i), out = av !== null && av <= 0;
+    const canBuy = p && p.sector === sector;
+    const short = canBuy ? i.cost - bal(S.me) : 0;
+    let btn = '';
+    if (canBuy) {
+      if (out) btn = `<button class="btn" disabled>Esgotado</button>`;
+      else if (short > 0) btn = `<button class="btn" disabled>Faltam ${fmt(short)}</button>`;
+      else if (S.confirmId === i.id) btn = `<button class="btn warn" data-buy="${i.id}" data-confirm="1">Confirmar troca</button>`;
+      else btn = `<button class="btn" data-buy="${i.id}">Trocar</button>`;
+    } else if (out) btn = `<span class="hint">Esgotado</span>`;
+    const stock = av === null ? 'Estoque livre' : out ? 'Sem estoque' : `${fmt(av)} restantes`;
+    const img = safeImg(i.image);
+    return `<article class="ticket ${out?'off':''}">${img?`<div class="pic"><img src="${img}" alt=""></div>`:''}<div class="body">${img?'':`<div class="emoji" aria-hidden="true">${esc(i.emoji||'🎁')}</div>`}
+      <h3>${esc(i.name)}</h3>${i.desc?`<p>${esc(i.desc)}</p>`:''}
+      <div class="meta"><span class="sector-tag ${i.sector}">${SECT[i.sector]?.name||''}</span><span class="sector-tag ambos">${stock}</span></div></div>
+      <div class="stub"><span class="price">${coin}${fmt(i.cost)}</span>${btn}</div></article>`;
+  }).join('');
+}
+
+function ledgerLi(l, showWho){
+  const pos = l.amount >= 0;
+  return `<li><div class="grow"><div class="t">${esc(l.reason||'')}</div><div class="s">${showWho?esc(nm(l.player))+' · ':''}${when(l.at)}</div></div>
+    <span class="${pos?'plus':'minus'}">${pos?'+':''}${fmt(l.amount)}</span></li>`;
+}
+function redLi(r, sup){
+  const lab = {pendente:'Aguardando',entregue:'Entregue',recusada:'Recusada · estornado'}[r.status]||r.status;
+  return `<li><span style="font-size:24px" aria-hidden="true">${esc(r.emoji||'🎁')}</span><div class="grow"><div class="t">${esc(r.itemName)}</div>
+    <div class="s">${sup?esc(nm(r.player))+' · '+(SECT[r.sector]?.name||'')+' · ':''}${fmt(r.cost)} Unicoins · ${when(r.at)}</div></div>
+    ${sup && r.status==='pendente' ? `<button class="btn ok sm" data-deliver="${r.id}">Entregar</button><button class="btn bad sm" data-refuse="${r.id}">Recusar</button>` : `<span class="status ${r.status}">${lab}</span>`}</li>`;
+}
+function fillMine(){
+  const L = S.ledger.filter(l => l.player === S.me), R = S.reds.filter(r => r.player === S.me);
+  $('#myLedger').innerHTML = L.length ? L.map(l=>ledgerLi(l,false)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
+  $('#myReds').innerHTML = R.length ? R.map(r=>redLi(r,false)).join('') : '<li class="empty">Você ainda não trocou nenhum prêmio.</li>';
+}
+function fillRank(){
+  const secs = isSup() ? ['fin','chat'] : [me().sector];
+  $('#rank').innerHTML = secs.map(k => {
+    const ps = Object.values(S.players).filter(p=>p.sector===k).sort((a,b)=>earned(b.id)-earned(a.id)).slice(0,10);
+    return `<section class="panel"><h3><span class="sector-tag ${k}">${SECT[k].name}</span></h3><ul class="list">${ps.length ? ps.map((p,i)=>`<li><span class="pos ${i===0?'p1':''}">${i+1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém deste setor entrou ainda.</li>'}</ul></section>`;
+  }).join('');
+}
+function fillSup(){
+  const pc = $('#pc'); if (pc) pc.innerHTML = pendingCount() ? `<span class="count">${pendingCount()}</span>` : '';
+  const ac = $('#ac'); if (ac) { const n = S.owner ? Object.values(S.players).filter(p=>p.supRequest && !(S.cfg.supervisors||[]).includes(p.id)).length : 0; ac.innerHTML = n ? ` <span class="count">${n}</span>` : ''; }
+  const tc = $('#tc'); if (tc) tc.innerHTML = subPending() ? `<span class="count">${subPending()}</span>` : '';
+  if (S.sub === 'tarefas') fillSupTasks();
+  if (S.sub === 'premios') {
+    const items = [...S.items].sort((a,b)=>(a.sector+a.cost).localeCompare(b.sector+b.cost, undefined, {numeric:true}));
+    $('#itemList').innerHTML = items.length ? items.map(i => `<li>${safeImg(i.image)?`<img class="mini" src="${safeImg(i.image)}" alt="">`:`<span style="font-size:24px" aria-hidden="true">${esc(i.emoji||'🎁')}</span>`}
+      <div class="grow"><div class="t">${esc(i.name)}${i.active===false?' <span class="hint">(oculto)</span>':''}</div>
+      <div class="s">${fmt(i.cost)} Unicoins · ${SECT[i.sector]?.name} · ${avail(i)===null?'estoque livre':fmt(avail(i))+' em estoque'}</div></div>
+      <button class="btn ghost sm" data-edit="${i.id}">Editar</button><button class="btn ghost sm" data-toggle="${i.id}">${i.active===false?'Mostrar':'Ocultar'}</button>
+      <button class="btn bad sm" data-del="${i.id}" ${S.confirmDel===i.id?'data-confirm="1"':''}>${S.confirmDel===i.id?'Confirmar':'Excluir'}</button></li>`).join('')
+      : '<li class="empty">Nenhum prêmio cadastrado. Use o formulário para criar o primeiro.</li>';
+  }
+  if (S.sub === 'moedas') {
+    const sel = $('#cTarget'), keep = sel.value;
+    const ps = Object.values(S.players).sort((a,b)=>nm(a.id).localeCompare(nm(b.id)));
+    sel.innerHTML = '<option value="">Selecione…</option>' + ['fin','chat'].map(k => `<optgroup label="${SECT[k].name}">${ps.filter(p=>p.sector===k).map(p=>`<option value="${p.id}">${esc(nm(p.id))} — ${fmt(bal(p.id))}</option>`).join('')}</optgroup>`).join('');
+    sel.value = keep;
+    $('#playerList').innerHTML = ps.length ? ps.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · ganhou ${fmt(earned(p.id))} no total</div></div>
+      <select class="in" style="width:auto;flex:none" data-move="${p.id}" aria-label="Setor de ${esc(nm(p.id))}"><option value="fin" ${p.sector==='fin'?'selected':''}>Financeiro</option><option value="chat" ${p.sector==='chat'?'selected':''}>Chat</option></select>
+      <span class="price" style="font-size:18px">${coin}${fmt(bal(p.id))}</span></li>`).join('') : '<li class="empty">Quando os colaboradores abrirem o link e escolherem o setor, eles aparecem aqui.</li>';
+    const L = S.ledger.slice(0,40);
+    $('#ledgerList').innerHTML = L.length ? L.map(l=>ledgerLi(l,true)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
+  }
+  if (S.sub === 'pedidos') {
+    const P = S.reds.filter(r=>r.status==='pendente').slice().reverse(), D = S.reds.filter(r=>r.status!=='pendente').slice(0,60);
+    $('#pendList').innerHTML = P.length ? P.map(r=>redLi(r,true)).join('') : '<li class="empty">Nenhum pedido aguardando.</li>';
+    $('#doneList').innerHTML = D.length ? D.map(r=>redLi(r,true)).join('') : '<li class="empty">Os pedidos entregues ou recusados ficam aqui.</li>';
+  }
+  if (S.sub === 'acessos') {
+    $('#slots').innerHTML = [0,1,2].map(i => { const id = S.cfg.supervisors[i];
+      return `<div class="slot"><span class="pos ${id?'p1':''}">${i+1}</span><div class="grow">${id?`<b>${esc(nm(id))}</b>`:'<span class="hint">Acesso livre</span>'}</div>
+      ${id && S.owner ? `<button class="btn bad sm" data-unslot="${i}">Remover</button>` : ''}</div>`; }).join('');
+    if (!S.owner) return;
+    const sups = S.cfg.supervisors||[];
+    const all = Object.values(S.players).sort((a,b)=>nm(a.id).localeCompare(nm(b.id)));
+    const reqs = all.filter(p=>p.supRequest && !sups.includes(p.id));
+    $('#reqList').innerHTML = reqs.length ? reqs.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · pediu acesso de supervisão</div></div>
+      <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
+    const others = all.filter(p=>!sups.includes(p.id));
+    $('#peopleList').innerHTML = others.length ? others.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[0,1,2].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar na loja aparece aqui.</li>';
+  }
+}
+function fillHits(){
+  const box = $('#sHits'); if (!box) return;
+  box.innerHTML = S.searchHits.length ? S.searchHits.map(h => `<li><div class="grow t">${esc(h.name)}</div>${[0,1,2].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${h.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Nenhuma pessoa encontrada.</li>';
+}
+
+/* ---------- Tarefas ---------- */
+function tasksFor(sector){ return S.tasks.filter(t => t.active !== false && (t.sector === 'ambos' || t.sector === sector)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); }
+const SUBLAB = { pendente:'Em análise', aprovada:'Aprovada', recusada:'Recusada' };
+function fillTasks(){
+  const p = me(), sup = isSup();
+  const sector = p && !(sup && S.previewSet) ? p.sector : S.preview;
+  if (sup) $('#taskPrev').innerHTML = `<div class="subnav">${['fin','chat'].map(k=>`<button data-prev="${k}" aria-current="${sector===k}">Tarefas ${SECT[k].name}</button>`).join('')}</div>`;
+  const list = tasksFor(sector);
+  const box = $('#tasks');
+  if (!list.length) box.innerHTML = `<p class="empty" style="grid-column:1/-1">${sup ? 'Nenhuma tarefa para este setor. Crie em Supervisão › Tarefas.' : 'Nenhuma tarefa aberta agora. Novas tarefas aparecem aqui assim que a supervisão publicar.'}</p>`;
+  else box.innerHTML = list.map(t => {
+    const mine = p ? S.subs.filter(x => x.task === t.id && x.player === S.me) : [];
+    const pend = mine.some(x => x.status === 'pendente'), done = mine.some(x => x.status === 'aprovada');
+    const canDo = p && p.sector === sector;
+    let action = '';
+    if (canDo) {
+      if (pend) action = `<span class="status pendente">Em análise</span>`;
+      else if (done && !t.repeat) action = `<span class="status aprovada">Concluída</span>`;
+      else if (S.openTask !== t.id) action = `<button class="btn" data-open="${t.id}">${t.proof ? 'Enviar comprovação' : 'Marcar como feita'}</button>`;
+    }
+    const form = canDo && S.openTask === t.id ? `<form class="tform" id="subForm" data-task="${t.id}">
+        <label class="f" for="sNote" style="margin-top:0">${t.proof ? 'Comprovação: link ou descrição' : 'Observação (opcional)'}</label>
+        <textarea class="in" id="sNote" rows="2" maxlength="500">${esc(S.draft.note)}</textarea>
+        ${t.proof ? `<span class="f" style="display:block">Imagem (print, foto)</span><div class="imgpick"><div class="thumb">${safeImg(S.draft.image)?`<img src="${S.draft.image}" alt="Comprovação">`:'Sem imagem'}</div>
+          <div class="row" style="gap:6px"><input type="file" id="sImg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr"><label for="sImg" class="btn ghost sm" style="flex:none" tabindex="0" id="sImgBtn">Anexar imagem</label>
+          ${S.draft.image?'<button type="button" class="btn bad sm" style="flex:none" id="sImgDel">Remover</button>':''}</div></div>` : ''}
+        <div class="row" style="margin-top:12px"><button class="btn" type="submit">Enviar para a supervisão</button><button class="btn ghost" type="button" id="sCancel">Cancelar</button></div></form>` : '';
+    return `<article class="ticket"><div class="body"><div class="meta" style="margin-top:0"><span class="sector-tag ${t.sector}">${SECT[t.sector]?.name||''}</span>
+      ${t.proof?'<span class="sector-tag ambos">Exige comprovação</span>':''}${t.repeat?'<span class="sector-tag ambos">Repetível</span>':''}</div>
+      <h3>${esc(t.title)}</h3>${t.desc?`<p style="white-space:pre-wrap">${esc(t.desc)}</p>`:''}${form}</div>
+      <div class="stub"><span class="reward">+${fmt(t.reward)} ${coin}</span>${action}</div></article>`;
+  }).join('');
+  const ms = $('#mySubs');
+  if (ms) { const L = S.subs.filter(x => x.player === S.me);
+    ms.innerHTML = L.length ? L.map(x => `<li><div class="grow"><div class="t">${esc(x.taskTitle)}</div><div class="s">${when(x.at)}${x.status==='recusada'&&x.reason?' · Motivo: '+esc(x.reason):''}</div></div>
+      <span class="reward" style="font-size:16px;${x.status==='aprovada'?'':'color:var(--muted)'}">+${fmt(x.reward)}</span><span class="status ${x.status}">${SUBLAB[x.status]}</span></li>`).join('') : '<li class="empty">Você ainda não enviou nenhuma tarefa.</li>'; }
+}
+function subBlock(x, pending){
+  const img = proofOf(x);
+  return `<div class="subitem">${img ? `<button class="proof" data-zoom="${x.id}" aria-label="Ampliar comprovação"><img src="${img}" alt=""></button>` : x.hasImage ? '<span class="proof" style="display:grid;place-items:center;font-size:11px;color:var(--muted)">carregando</span>' : '<span class="pos" aria-hidden="true">✓</span>'}
+    <div><div class="t" style="font-weight:600">${esc(nm(x.player))} · ${esc(x.taskTitle)}</div>
+    <div class="s hint" style="font-size:13px">${SECT[x.sector]?.name||''} · +${fmt(x.reward)} Unicoins · ${when(x.at)}</div>
+    ${x.note ? `<div class="note">${esc(x.note)}</div>` : ''}
+    ${pending ? `<div class="row" style="margin-top:10px"><input class="in" id="r_${x.id}" data-reason="${x.id}" placeholder="Motivo, se recusar" value="${esc(S.reasons[x.id]||'')}" style="flex:2 1 160px">
+      <button class="btn ok sm" style="flex:none" data-approve="${x.id}">Aprovar</button><button class="btn bad sm" style="flex:none" data-reject="${x.id}">Recusar</button></div>`
+      : `<div style="margin-top:6px"><span class="status ${x.status}">${SUBLAB[x.status]}</span>${x.reason?` <span class="hint" style="font-size:13px">${esc(x.reason)}</span>`:''}</div>`}</div></div>`;
+}
+function proofOf(x){ return safeImg(x.image) || safeImg(S.proofs[x.id]); }
+function loadProofs(list){
+  const need = list.filter(x => x.hasImage && !(x.id in S.proofs) && !S.proofLoading.has(x.id));
+  need.forEach(x => { S.proofLoading.add(x.id); S.db.doc('proofs/'+x.id).get().then(s => { S.proofs[x.id] = s.exists ? s.data().image : null; S.proofLoading.delete(x.id); if (S.tab==='sup' && S.sub==='tarefas') keepFocus(fillSupTasks); }).catch(() => S.proofLoading.delete(x.id)); });
+}
+function fillSupTasks(){
+  const ts = [...S.tasks].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  $('#taskList').innerHTML = ts.length ? ts.map(t => `<li><div class="grow"><div class="t">${esc(t.title)}${t.active===false?' <span class="hint">(oculta)</span>':''}</div>
+    <div class="s">+${fmt(t.reward)} Unicoins · ${SECT[t.sector]?.name}${t.proof?' · com comprovação':''}${t.repeat?' · repetível':''}</div></div>
+    <button class="btn ghost sm" data-tedit="${t.id}">Editar</button><button class="btn ghost sm" data-ttoggle="${t.id}">${t.active===false?'Mostrar':'Ocultar'}</button>
+    <button class="btn bad sm" data-tdel="${t.id}" ${S.confirmTDel===t.id?'data-confirm="1"':''}>${S.confirmTDel===t.id?'Confirmar':'Excluir'}</button></li>`).join('')
+    : '<li class="empty">Nenhuma tarefa ainda. Use o formulário para publicar a primeira.</li>';
+  const P = S.subs.filter(x=>x.status==='pendente').slice().reverse(), D = S.subs.filter(x=>x.status!=='pendente').slice(0,30);
+  loadProofs(P.concat(D.slice(0,10)));
+  $('#subPend').innerHTML = P.length ? P.map(x=>subBlock(x,true)).join('') : '<p class="empty">Nenhuma entrega aguardando conferência.</p>';
+  $('#subDone').innerHTML = D.length ? D.map(x=>subBlock(x,false)).join('') : '<p class="empty">As entregas aprovadas ou recusadas ficam aqui.</p>';
+}
+function resetTaskForm(){ S.editingTask=null; $('#taskForm').reset(); $('#tActive').checked=true; $('#tFormTitle').textContent='Nova tarefa'; $('#tSave').textContent='Publicar tarefa'; $('#tCancel').hidden=true; }
+function editTask(id){ const t=S.tasks.find(x=>x.id===id); if(!t) return; S.editingTask=id;
+  $('#tTitle').value=t.title; $('#tDesc').value=t.desc||''; $('#tReward').value=t.reward; $('#tSector').value=t.sector; $('#tProof').checked=!!t.proof; $('#tRepeat').checked=!!t.repeat; $('#tActive').checked=t.active!==false;
+  $('#tFormTitle').textContent='Editar tarefa'; $('#tSave').textContent='Salvar alterações'; $('#tCancel').hidden=false; $('#tTitle').focus(); }
+async function decide(id, ok){ await guard(async () => {
+  const reason = ok ? '' : (S.reasons[id]||'').trim().slice(0,200);
+  const msg = await runTransaction(fdb, async tx => {
+    const sRef = doc(fdb,'submissions',id); const ss = await tx.get(sRef);
+    const x = ss.exists() && ss.data();
+    if (!x || x.status !== 'pendente') return 'Esta entrega já foi conferida por outra pessoa da supervisão.';
+    let pRef, ps;
+    if (ok) { pRef = doc(fdb,'players',x.player); ps = await tx.get(pRef); }
+    if (ok && ps.exists()) {
+      const p = ps.data();
+      tx.update(pRef, { balance:(p.balance||0) + x.reward, earned:(p.earned||0) + x.reward });
+      tx.set(doc(fdb,'ledger','task_'+id), { player:x.player, amount:x.reward, kind:'task', reason:'Tarefa: '+x.taskTitle, by:S.me, at:now() });
+    }
+    tx.update(sRef, { status: ok?'aprovada':'recusada', reason, doneBy:S.me, doneAt:now() });
+    return ok ? `${fmt(x.reward)} Unicoins creditados para ${nm(x.player)}.` : 'Entrega recusada.';
+  });
+  delete S.reasons[id]; toast(msg); }); }
+function zoom(src){ const d=document.createElement('div'); d.className='lb'; d.setAttribute('role','dialog'); d.innerHTML=`<img src="${src}" alt="Comprovação ampliada">`;
+  const close=()=>{ d.remove(); document.removeEventListener('keydown',k); }; const k=e=>{ if(e.key==='Escape') close(); };
+  d.addEventListener('click', close); document.addEventListener('keydown',k); document.body.appendChild(d); }
+
+/* ---------- Actions ---------- */
+async function guard(fn){ if (S.busy) return; S.busy = true; try { await fn(); } catch(e){ toast(e && e.code==='permission-denied' ? 'O banco não permitiu esta ação para o seu acesso.' : e && e.code==='resource-exhausted' ? 'Limite diário do plano gratuito do Firebase atingido. Tente amanhã.' : e && e.code==='failed-precondition' ? 'Muita gente mexendo nisso agora. Tente de novo em alguns segundos.' : e && e.code==='unavailable' ? 'Sem conexão com o banco. Verifique a internet.' : 'Não foi possível salvar. Tente de novo em instantes.'); console.error(e); } finally { S.busy = false; } }
+
+async function join(name, sector, wantSup){ await guard(async () => {
+  await setDoc(doc(fdb,'players',S.me), { name, sector, supRequest:!!wantSup, balance:0, earned:0, joinedAt:now() });
+  S.tab = 'loja'; toast('Bem-vindo ao Unicoins!'); }); }
+
+async function buy(id){ await guard(async () => {
+  const p = me(); if (!p) return;
+  const res = await runTransaction(fdb, async tx => {
+    const pRef = doc(fdb,'players',S.me), iRef = doc(fdb,'items',id);
+    const ps = await tx.get(pRef), is = await tx.get(iRef);
+    if (!is.exists() || is.data().active !== true) return 'Este prêmio saiu da loja.';
+    const it = is.data(), pl = ps.data(), b = pl.balance || 0;
+    if (it.sector !== 'ambos' && it.sector !== pl.sector) return 'Este prêmio não é do seu setor.';
+    if (b < it.cost) return 'Saldo insuficiente.';
+    if (it.stock !== null && it.stock !== undefined && it.stock <= 0) return 'Este prêmio acabou de esgotar.';
+    const rRef = doc(collection(fdb,'redemptions')), rid = rRef.id, t = now();
+    tx.update(pRef, { balance:b - it.cost, lastRedemption:rid });
+    if (it.stock !== null && it.stock !== undefined) tx.update(iRef, { stock:it.stock - 1, lastRedemption:rid });
+    tx.set(rRef, { player:S.me, sector:pl.sector, item:id, itemName:it.name, emoji:it.emoji||'🎁', cost:it.cost, status:'pendente', at:t });
+    tx.set(doc(fdb,'ledger','redeem_'+rid), { player:S.me, amount:-it.cost, kind:'redeem', reason:'Troca: '+it.name, by:S.me, at:t, ref:rid });
+    return null;
+  });
+  S.confirmId = null; fillStore();
+  toast(res || 'Troca feita! A supervisão vai combinar a entrega.'); }); }
+
+async function adjust(pid, amount, reason, kind){
+  return runTransaction(fdb, async tx => {
+    const r = doc(fdb,'players',pid), s = await tx.get(r);
+    if (!s.exists()) return 0;
+    const b = s.data().balance || 0;
+    const real = amount < 0 ? -Math.min(-amount, Math.max(0, b)) : amount;
+    if (!real) return 0;
+    const k = kind || (real > 0 ? 'credit' : 'debit');
+    tx.update(r, isEarnKind(k) ? { balance:b + real, earned:(s.data().earned||0) + real } : { balance:b + real });
+    tx.set(doc(collection(fdb,'ledger')), { player:pid, amount:real, kind:k, reason, by:S.me, at:now() });
+    return real;
+  });
+}
+async function bulkCredit(ids, amt, why){
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = writeBatch(fdb), t = now();
+    ids.slice(i, i + 200).forEach(pid => {
+      batch.update(doc(fdb,'players',pid), { balance:increment(amt), earned:increment(amt) });
+      batch.set(doc(collection(fdb,'ledger')), { player:pid, amount:amt, kind:'bulk', reason:why, by:S.me, at:t });
+    });
+    await batch.commit();
+  }
+}
+
+async function settle(rid, ok){ await guard(async () => {
+  const msg = await runTransaction(fdb, async tx => {
+    const rRef = doc(fdb,'redemptions',rid), rs = await tx.get(rRef);
+    const r = rs.exists() && rs.data();
+    if (!r || r.status !== 'pendente') return 'Este pedido já foi resolvido por outra pessoa da supervisão.';
+    if (!ok) {
+      const pRef = doc(fdb,'players',r.player), iRef = doc(fdb,'items',r.item);
+      const ps = await tx.get(pRef), is = await tx.get(iRef);
+      if (ps.exists()) tx.update(pRef, { balance:(ps.data().balance||0) + r.cost });
+      if (is.exists() && is.data().stock !== null && is.data().stock !== undefined) tx.update(iRef, { stock:is.data().stock + 1 });
+      tx.set(doc(fdb,'ledger','refund_'+rid), { player:r.player, amount:r.cost, kind:'refund', reason:'Estorno: '+r.itemName, by:S.me, at:now() });
+    }
+    tx.update(rRef, { status: ok?'entregue':'recusada', doneBy:S.me, doneAt:now() });
+    return ok ? 'Pedido marcado como entregue.' : 'Pedido recusado e Unicoins devolvidos.';
+  });
+  toast(msg); }); }
+
+function setThumb(){ const t=$('#fThumb'); if(!t) return; const v=safeImg(S.formImg); t.innerHTML = v?`<img src="${v}" alt="Imagem do prêmio">`:'Sem imagem'; $('#fImgDel').hidden=!v; }
+function readImage(file, maxLen = 110000){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=rej; fr.onload=()=>{ const img=new Image(); img.onerror=rej; img.onload=()=>{
+  let max=720,q=.85,out=''; for(let k=0;k<7;k++){ const sc=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*sc)); c.height=Math.max(1,Math.round(img.height*sc));
+    const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height); out=c.toDataURL('image/jpeg',q); if(out.length<maxLen) break; max*=.8; q=Math.max(.5,q-.08); }
+  res(out); }; img.src=fr.result; }; fr.readAsDataURL(file); }); }
+function resetForm(){ S.editing=null; S.formImg=null; setThumb(); $('#itemForm').reset(); $('#fEmoji').value='🎁'; $('#fActive').checked=true; $('#formTitle').textContent='Novo prêmio'; $('#fSave').textContent='Adicionar à loja'; $('#fCancel').hidden=true; }
+function editItem(id){ const i=S.items.find(x=>x.id===id); if(!i) return; S.editing=id;
+  $('#fEmoji').value=i.emoji||'🎁'; $('#fName').value=i.name; $('#fDesc').value=i.desc||''; $('#fCost').value=i.cost; $('#fStock').value=i.stock??''; $('#fSector').value=i.sector; $('#fActive').checked=i.active!==false; S.formImg=safeImg(i.image); setThumb();
+  $('#formTitle').textContent='Editar prêmio'; $('#fSave').textContent='Salvar alterações'; $('#fCancel').hidden=false; $('#fName').focus(); }
+
+/* ---------- Events ---------- */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset;
+  if (b.id === 'logout') { if (auth) await signOut(auth); return; }
+  if (b.id === 'copyUid') { try { await navigator.clipboard.writeText(S.me); toast('UID copiado.'); } catch(_) { toast('Selecione e copie o UID manualmente.'); } return; }
+  if (b.id === 'google') { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(err) { if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') toast(authMsg(err)); } return; }
+  if (b.id === 'forgot') { const em = ($('#lEmail').value||'').trim(); if (!em) return toast('Digite seu e-mail no campo acima.');
+    try { await sendPasswordResetEmail(auth, em); toast('Se existir conta, enviamos o link de nova senha para ' + em + '.'); } catch(err) { toast(authMsg(err)); } return; }
+  if (d.tab) { S.tab = d.tab; S.confirmId=null; return build(); }
+  if (d.sub) { S.sub = d.sub; return build(); }
+  if (d.open) { S.openTask=d.open; S.draft={note:'',image:null}; fillTasks(); const n=$('#sNote'); if(n) n.focus(); return; }
+  if (b.id === 'sCancel') { S.openTask=null; return fillTasks(); }
+  if (b.id === 'sImgDel') { S.draft.image=null; return fillTasks(); }
+  if (d.zoom) { const x=S.subs.find(s=>s.id===d.zoom); const v=x&&proofOf(x); if(v) zoom(v); return; }
+  if (d.approve) return decide(d.approve, true);
+  if (d.reject) return decide(d.reject, false);
+  if (d.tedit) return editTask(d.tedit);
+  if (b.id === 'tCancel') return resetTaskForm();
+  if (d.ttoggle) { const t=S.tasks.find(x=>x.id===d.ttoggle); return guard(()=>S.db.doc('tasks/'+d.ttoggle).update({active:t.active===false})); }
+  if (d.tdel) { if (d.confirm) { S.confirmTDel=null; if (S.editingTask===d.tdel) resetTaskForm(); return guard(async()=>{ await S.db.doc('tasks/'+d.tdel).delete(); toast('Tarefa excluída.'); }); }
+    S.confirmTDel=d.tdel; fillSup(); setTimeout(()=>{ if(S.confirmTDel===d.tdel){ S.confirmTDel=null; if(S.sub==='tarefas') fillSup(); } },5000); return; }
+  if (d.pick) { S.joinSector = d.pick; document.querySelectorAll('[data-pick]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.pick===d.pick)); return; }
+  if (b.id === 'fImgDel') { S.formImg=null; $('#fImg').value=''; return setThumb(); }
+  if (d.release) return guard(async () => { const s=[...S.cfg.supervisors]; const i=s.findIndex(x=>!x); if(i<0) return toast('Os 3 acessos estão ocupados. Remova alguém antes de liberar.');
+    s[i]=d.release; await S.db.doc('config/main').set({ supervisors:s }); await S.db.doc('players/'+d.release).update({ supRequest:false }); toast(`${nm(d.release)} liberado no acesso ${i+1}.`); });
+  if (d.deny) return guard(async () => { await S.db.doc('players/'+d.deny).update({ supRequest:false }); toast('Pedido recusado.'); });
+  if (d.prev) { S.preview = d.prev; S.previewSet = true; return fill(); }
+  if (d.buy) { if (d.confirm) return buy(d.buy); S.confirmId = d.buy; fillStore(); setTimeout(()=>{ if(S.confirmId===d.buy){ S.confirmId=null; if(S.tab==='loja') fillStore(); } },5000); return; }
+  if (d.deliver) return settle(d.deliver, true);
+  if (d.refuse) return settle(d.refuse, false);
+  if (d.edit) return editItem(d.edit);
+  if (d.toggle) { const i=S.items.find(x=>x.id===d.toggle); return guard(()=>S.db.doc('items/'+d.toggle).update({active:i.active===false})); }
+  if (d.del) { if (d.confirm) { S.confirmDel=null; if (S.editing===d.del) resetForm(); return guard(async()=>{ await S.db.doc('items/'+d.del).delete(); toast('Prêmio excluído.'); }); }
+    S.confirmDel = d.del; fillSup(); setTimeout(()=>{ if(S.confirmDel===d.del){ S.confirmDel=null; if(S.sub==='premios') fillSup(); } },5000); return; }
+  if (b.id === 'fCancel') return resetForm();
+  if (d.slot !== undefined && d.pid) return guard(async () => { const s = [...S.cfg.supervisors].map(x => x===d.pid?null:x); s[+d.slot] = d.pid;
+    await S.db.doc('config/main').set({ supervisors:s }); if (S.players[d.pid]?.supRequest) await S.db.doc('players/'+d.pid).update({ supRequest:false }); toast(`${nm(d.pid)} agora é o acesso ${+d.slot+1}.`); });
+  if (d.unslot !== undefined) return guard(async () => { const s=[...S.cfg.supervisors]; s[+d.unslot]=null; await S.db.doc('config/main').set({ supervisors:s }); toast('Acesso liberado.'); });
+});
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'sImg' && e.target.files[0]) { const f=e.target.files[0];
+    if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
+    readImage(f, 180000).then(u => { S.draft.image=u; fillTasks(); }).catch(()=>toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
+  if (e.target.id === 'fImg' && e.target.files[0]) { const f=e.target.files[0];
+    if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
+    readImage(f).then(u => { S.formImg=u; setThumb(); }).catch(()=>toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
+  const m = e.target.dataset && e.target.dataset.move;
+  if (m) guard(async()=>{ await S.db.doc('players/'+m).update({ sector:e.target.value }); toast('Setor atualizado.'); });
+});
+document.addEventListener('input', e => { if (e.target.id==='sNote') S.draft.note=e.target.value; if (e.target.dataset && e.target.dataset.reason) S.reasons[e.target.dataset.reason]=e.target.value; });
+
+document.addEventListener('keydown', e => { if ((e.target.id==='sImgBtn') && (e.key==='Enter'||e.key===' ')) { e.preventDefault(); return $('#sImg').click(); }
+  if (e.target.id==='fImgBtn' && (e.key==='Enter'||e.key===' ')) { e.preventDefault(); $('#fImg').click(); } });
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.id === 'loginForm') return guard(async () => {
+    const em = $('#lEmail').value.trim(), pw = $('#lPass').value, mode = e.submitter?.dataset.mode || 'in';
+    if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(dm => em.toLowerCase().endsWith('@' + dm.toLowerCase()))) return toast('Use seu e-mail corporativo (' + ALLOWED_EMAIL_DOMAINS.map(dm => '@' + dm).join(', ') + ').');
+    try { if (mode === 'up') await createUserWithEmailAndPassword(auth, em, pw); else await signInWithEmailAndPassword(auth, em, pw); }
+    catch(err) { toast(authMsg(err)); }
+  });
+  if (f.id === 'subForm') return guard(async () => {
+    const t = S.tasks.find(x=>x.id===f.dataset.task), p = me(); if (!t || !p) return;
+    const note = S.draft.note.trim(), image = safeImg(S.draft.image);
+    if (t.proof && !note && !image) return toast('Anexe uma imagem ou descreva a comprovação.');
+    if (S.subs.some(x=>x.task===t.id && x.player===S.me && (x.status==='pendente' || (x.status==='aprovada' && !t.repeat)))) return toast('Você já enviou esta tarefa.');
+    const sid = t.repeat ? doc(collection(fdb,'submissions')).id : t.id + '_' + S.me;
+    if (image) await setDoc(doc(fdb,'proofs',sid), { image, player:S.me, at:now() });
+    await setDoc(doc(fdb,'submissions',sid), { task:t.id, taskTitle:t.title, reward:t.reward, player:S.me, sector:p.sector, note, hasImage:!!image, status:'pendente', at:now() });
+    S.openTask=null; S.draft={note:'',image:null}; fillTasks(); toast('Enviado! A supervisão vai conferir.');
+  });
+  if (f.id === 'taskForm') return guard(async () => {
+    const title=$('#tTitle').value.trim(), reward=parseInt($('#tReward').value,10);
+    if (!title || !(reward>0)) return toast('Informe a tarefa e uma recompensa maior que zero.');
+    const data={ title, desc:$('#tDesc').value.trim(), reward, sector:$('#tSector').value, proof:$('#tProof').checked, repeat:$('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
+    if (S.editingTask) { await S.db.doc('tasks/'+S.editingTask).update(data); toast('Tarefa atualizada.'); }
+    else { await S.db.collection('tasks').add({ ...data, createdAt:now() }); toast('Tarefa publicada.'); }
+    resetTaskForm();
+  });
+  if (f.id === 'joinForm') { const n=$('#jName').value.trim().replace(/\s+/g,' ');
+    if (n.length < 3) return toast('Digite seu nome.');
+    if (!S.joinSector) return toast('Selecione seu setor.');
+    return join(n, S.joinSector, $('#jSup').checked); }
+  if (f.id === 'itemForm') return guard(async () => {
+    const cost = parseInt($('#fCost').value,10), st = $('#fStock').value.trim();
+    const name = $('#fName').value.trim();
+    if (!name || !(cost>0)) return toast('Informe o nome e um custo maior que zero.');
+    const left = st===''?null:Math.max(0,parseInt(st,10)||0);
+    const data = { name, desc:$('#fDesc').value.trim(), emoji:$('#fEmoji').value.trim()||'🎁', cost, stock:left,
+      sector:$('#fSector').value, active:$('#fActive').checked, image:safeImg(S.formImg), updatedAt:now(), updatedBy:S.me };
+    if (S.editing) { await S.db.doc('items/'+S.editing).update(data); toast('Prêmio atualizado na loja.'); }
+    else { await S.db.collection('items').add({ ...data, createdAt:now() }); toast('Prêmio adicionado à loja.'); }
+    resetForm();
+  });
+  if (f.id === 'coinForm') return guard(async () => {
+    const dir = +(e.submitter?.dataset.dir || 1), pid = $('#cTarget').value, amt = parseInt($('#cAmt').value,10), why = $('#cWhy').value.trim();
+    if (!pid || !(amt>0) || !why) return toast('Escolha o colaborador, a quantidade e o motivo.');
+    const real = await adjust(pid, dir*amt, why);
+    if (!real) return toast(`${nm(pid)} não tem saldo para debitar.`);
+    toast(`${real>0?'Creditados':'Debitados'} ${fmt(Math.abs(real))} Unicoins ${real>0?'para':'de'} ${nm(pid)}.`); $('#cAmt').value=''; $('#cWhy').value='';
+  });
+  if (f.id === 'bulkForm') return guard(async () => {
+    const sec = $('#bSector').value, amt = parseInt($('#bAmt').value,10), why = $('#bWhy').value.trim();
+    if (!(amt>0) || !why) return toast('Informe a quantidade e o motivo.');
+    const ps = Object.values(S.players).filter(p=>p.sector===sec);
+    if (!ps.length) return toast('Ninguém deste setor entrou na loja ainda.');
+    await bulkCredit(ps.map(p => p.id), amt, why);
+    toast(`${fmt(amt)} Unicoins creditados para ${ps.length} pessoas do ${SECT[sec].name}.`); f.reset();
+  });
+});
+</script>
+</body>
+</html>
