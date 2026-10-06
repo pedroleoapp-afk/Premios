@@ -99,7 +99,7 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .cols{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:820px){.cols{grid-template-columns:1fr}}
 .panel h3{font-size:18px;margin-bottom:12px}
-label.f{display:block;font-size:14px;font-weight:600;margin:10px 0 4px}
+.f{display:block;font-size:14px;font-weight:600;margin:10px 0 4px}
 .in{width:100%;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 11px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .row > *{flex:1 1 120px}
@@ -199,8 +199,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, setDoc, updateDoc, deleteDoc, addDoc, runTransaction, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const SECT = { fin:{name:'Financeiro'}, chat:{name:'Chat Uniasselvi'}, ambos:{name:'Ambos os setores'} };
-const S = { db:null, user:null, me:null, owner:false, cfg:{supervisors:[null,null,null]}, items:[], players:{}, reds:[], ledger:[],
-  names:{}, pendingNames:new Set(), tab:'loja', sub:'tarefas', preview:'fin', editing:null, busy:false, confirmId:null, searchHits:[], tasks:[], subs:[], openTask:null, draft:{note:'',image:null}, editingTask:null, reasons:{}, loaded:false, joinSector:null, formImg:null };
+const S = { db:null, user:null, me:null, owner:false, cfg:{supervisors:[null,null]}, items:[], players:{}, reds:[], ledger:[],
+  names:{}, pendingNames:new Set(), tab:'loja', sub:'tarefas', preview:'fin', editing:null, busy:false, confirmId:null, searchHits:[], tasks:[], subs:[], openTask:null, tMode:'setor', tSel:new Set(), tFind:'', draft:{note:'',image:null}, editingTask:null, reasons:{}, loaded:false, joinSector:null, formImg:null };
 
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -229,7 +229,7 @@ const now = () => Date.now();
 /* ---------- Boot ---------- */
 let base = [], live = [], liveKey = '';
 function stopAll(){ base.forEach(u => u()); live.forEach(u => u()); base = []; live = []; liveKey = ''; }
-function resetState(){ Object.assign(S, { me:null, owner:false, mine:null, gotCfg:false, gotMine:false, cfg:{supervisors:[null,null,null]}, items:[], players:{}, reds:[], ledger:[], tasks:[], subs:[], subsPend:[], subsRecent:[], proofs:{}, loaded:false, tab:'loja', sub:'tarefas', editing:null, editingTask:null, openTask:null }); }
+function resetState(){ Object.assign(S, { me:null, owner:false, mine:null, gotCfg:false, gotMine:false, cfg:{supervisors:[null,null]}, items:[], players:{}, reds:[], ledger:[], tasks:[], subs:[], subsPend:[], subsRecent:[], proofs:{}, loaded:false, tab:'loja', sub:'tarefas', editing:null, editingTask:null, openTask:null }); }
 
 if (!configured) {
   notice('Falta configurar o Firebase. Preencha FIREBASE_CONFIG no início do arquivo index.html.');
@@ -246,7 +246,10 @@ if (!configured) {
     S.me = u.uid; S.owner = ADMIN_UIDS.includes(u.uid); S.email = u.email || '';
     setupBanner();
     $('#role').textContent = 'Carregando…'; $('#main').innerHTML = '<p class="hint">Abrindo o balcão de prêmios…</p>';
-    base.push(onSnapshot(doc(fdb, 'config', 'main'), s => { const d = s.exists() ? s.data() : {}; S.cfg = { supervisors:(d.supervisors || [null,null,null]).slice(0,3) }; S.gotCfg = true; resub(); changed(); }, onErr));
+    base.push(onSnapshot(doc(fdb, 'config', 'main'), s => { const d = s.exists() ? s.data() : {}; const raw = d.supervisors || [];
+      const sv = raw.filter(Boolean).slice(0,2); while (sv.length < 2) sv.push(null);
+      S.cfg = { supervisors:sv };
+      if (S.owner && s.exists() && (raw.length > 2 || raw.some((x,i) => x !== sv[i]))) setDoc(doc(fdb,'config','main'), { supervisors:sv }).catch(()=>{}); S.gotCfg = true; resub(); changed(); }, onErr));
     base.push(onSnapshot(doc(fdb, 'players', S.me), s => { S.mine = s.exists() ? { id:s.id, ...s.data() } : null; if (S.mine) S.players[S.me] = S.mine; S.gotMine = true; resub(); changed(); }, onErr));
   });
 }
@@ -270,7 +273,7 @@ function resub(){
   if (isSup()) {
     list(C('players'), a => { const o = {}; a.forEach(p => o[p.id] = p); if (S.mine) o[S.me] = S.mine; S.players = o; });
     list(C('items'), a => S.items = a);
-    list(C('tasks'), a => S.tasks = a);
+    list(C('tasks'), a => { S.tasks = a; migrateTasks(); });
     list(query(C('redemptions'), where('status','==','pendente')), a => { S.redsPend = a; S.reds = [...a, ...(S.redsDone||[])].sort(byAtDesc); });
     list(query(C('redemptions'), orderBy('at','desc'), limit(120)), a => { S.redsDone = a.filter(r => r.status !== 'pendente'); S.reds = [...(S.redsPend||[]), ...S.redsDone].sort(byAtDesc); });
     list(query(C('ledger'), orderBy('at','desc'), limit(150)), a => S.ledger = a);
@@ -280,7 +283,9 @@ function resub(){
     const sec = S.mine.sector;
     list(query(C('players'), where('sector','==',sec)), a => { const o = {}; a.forEach(p => o[p.id] = p); o[S.me] = S.mine; S.players = o; });
     list(query(C('items'), where('sector','in',['ambos',sec])), a => S.items = a);
-    list(query(C('tasks'), where('sector','in',['ambos',sec])), a => S.tasks = a);
+    const mergeTasks = () => { const m = new Map(); [...(S.tasksSec||[]), ...(S.tasksMine||[])].forEach(t => m.set(t.id, t)); S.tasks = [...m.values()]; };
+    list(query(C('tasks'), where('audience','array-contains','sec:'+sec)), a => { S.tasksSec = a; mergeTasks(); });
+    list(query(C('tasks'), where('audience','array-contains','uid:'+S.me)), a => { S.tasksMine = a; mergeTasks(); });
     list(query(C('redemptions'), where('player','==',S.me)), a => S.reds = a.sort(byAtDesc));
     list(query(C('ledger'), where('player','==',S.me)), a => S.ledger = a.sort(byAtDesc));
     list(query(C('submissions'), where('player','==',S.me)), a => { S.subsRecent = a; mergeSubs(); });
@@ -331,6 +336,11 @@ function changed(){
   if (shape !== lastShape) build(); else fill();
 }
 function requestNames(){}
+let tasksMigrated = false;
+function migrateTasks(){
+  if (tasksMigrated || !isSup()) return; tasksMigrated = true;
+  S.tasks.filter(t => !Array.isArray(t.audience)).forEach(t => updateDoc(doc(fdb,'tasks',t.id), { audience: audOf(t) }).catch(()=>{ tasksMigrated = false; }));
+}
 
 /* ---------- Layout ---------- */
 function tabsFor(){
@@ -412,7 +422,12 @@ function buildSup(){
       <label class="f" for="tTitle">Tarefa</label><input class="in" id="tTitle" maxlength="80" required placeholder="Ex.: Zerar fila de e-mails pendentes">
       <label class="f" for="tDesc">Como fazer / o que conta</label><textarea class="in" id="tDesc" rows="3" maxlength="300" placeholder="Critérios para a tarefa ser aprovada"></textarea>
       <div class="row"><div><label class="f" for="tReward">Recompensa (Unicoins)</label><input class="in" id="tReward" type="number" min="1" step="1" required></div>
-      <div><label class="f" for="tSector">Para</label><select class="in" id="tSector"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select></div></div>
+      </div>
+      <span class="f" style="display:block">Para quem</span>
+      <div class="subnav" style="margin-bottom:8px"><button type="button" data-tmode="setor" aria-current="${S.tMode!=='pessoas'}">Setor inteiro</button><button type="button" data-tmode="pessoas" aria-current="${S.tMode==='pessoas'}">Colaboradores específicos</button></div>
+      <div id="tModeSetor" ${S.tMode==='pessoas'?'hidden':''}><select class="in" id="tSector" aria-label="Setor"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select></div>
+      <div id="tModePessoas" ${S.tMode==='pessoas'?'':'hidden'}><input class="in" id="tFind" placeholder="Filtrar por nome" value="${esc(S.tFind||'')}">
+        <ul class="list" id="tPeople" style="max-height:240px;overflow:auto;margin-top:6px"></ul><p class="hint" id="tSelCount" style="margin:4px 0 0;font-size:13px"></p></div>
       <label class="check"><input type="checkbox" id="tProof"> Exigir comprovação (imagem ou texto)</label>
       <label class="check"><input type="checkbox" id="tRepeat"> Pode ser feita mais de uma vez</label>
       <label class="check"><input type="checkbox" id="tActive" checked> Visível para os colaboradores</label>
@@ -424,8 +439,8 @@ function buildSup(){
       <section class="panel"><h3>Histórico de entregas</h3><div id="subDone"></div></section></div>`;
   if (S.sub === 'pedidos') h += `<div class="cols"><section class="panel"><h3>Aguardando entrega</h3><ul class="list" id="pendList"></ul></section>
     <section class="panel"><h3>Histórico</h3><ul class="list" id="doneList"></ul></section></div>`;
-  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os 3 acessos de supervisão</h3>
-      <p class="hint" style="margin-top:-4px">Todos têm as mesmas permissões: gerenciar prêmios, moedas e pedidos.${S.owner?'':' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
+  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os 2 acessos de supervisão</h3>
+      <p class="hint" style="margin-top:-4px">Os dois têm as mesmas permissões que você na Supervisão (prêmios, tarefas, moedas e pedidos), menos esta tela de acessos. Os demais colaboradores só fazem tarefas e trocam prêmios.${S.owner?'':' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
     ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
       <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
   M.innerHTML = h;
@@ -539,7 +554,7 @@ function fillSup(){
     $('#doneList').innerHTML = D.length ? D.map(r=>redLi(r,true)).join('') : '<li class="empty">Os pedidos entregues ou recusados ficam aqui.</li>';
   }
   if (S.sub === 'acessos') {
-    $('#slots').innerHTML = [0,1,2].map(i => { const id = S.cfg.supervisors[i];
+    $('#slots').innerHTML = [0,1].map(i => { const id = S.cfg.supervisors[i];
       return `<div class="slot"><span class="pos ${id?'p1':''}">${i+1}</span><div class="grow">${id?`<b>${esc(nm(id))}</b>`:'<span class="hint">Acesso livre</span>'}</div>
       ${id && S.owner ? `<button class="btn bad sm" data-unslot="${i}">Remover</button>` : ''}</div>`; }).join('');
     if (!S.owner) return;
@@ -549,16 +564,40 @@ function fillSup(){
     $('#reqList').innerHTML = reqs.length ? reqs.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · pediu acesso de supervisão</div></div>
       <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
     const others = all.filter(p=>!sups.includes(p.id));
-    $('#peopleList').innerHTML = others.length ? others.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[0,1,2].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar na loja aparece aqui.</li>';
+    $('#peopleList').innerHTML = others.length ? others.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[0,1].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar na loja aparece aqui.</li>';
   }
 }
 function fillHits(){
   const box = $('#sHits'); if (!box) return;
-  box.innerHTML = S.searchHits.length ? S.searchHits.map(h => `<li><div class="grow t">${esc(h.name)}</div>${[0,1,2].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${h.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Nenhuma pessoa encontrada.</li>';
+  box.innerHTML = S.searchHits.length ? S.searchHits.map(h => `<li><div class="grow t">${esc(h.name)}</div>${[0,1].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${h.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Nenhuma pessoa encontrada.</li>';
 }
 
 /* ---------- Tarefas ---------- */
-function tasksFor(sector){ return S.tasks.filter(t => t.active !== false && (t.sector === 'ambos' || t.sector === sector)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); }
+const audOf = t => Array.isArray(t.audience) ? t.audience : (t.sector === 'ambos' ? ['sec:fin','sec:chat'] : ['sec:' + t.sector]);
+const isIndividual = t => audOf(t).some(a => a.startsWith('uid:'));
+function visibleFor(t, sector){
+  const a = audOf(t);
+  if (a.includes('sec:' + sector)) return true;
+  const p = me();
+  if (p && p.sector === sector && a.includes('uid:' + S.me)) return true;
+  return isSup() && a.some(x => x.startsWith('uid:') && S.players[x.slice(4)] && S.players[x.slice(4)].sector === sector);
+}
+function audLabel(t){
+  const a = audOf(t);
+  if (!isIndividual(t)) return a.length > 1 ? 'Ambos os setores' : SECT[a[0].slice(4)]?.name || '';
+  const names = a.filter(x => x.startsWith('uid:')).map(x => nm(x.slice(4)));
+  return names.length > 3 ? names.slice(0,3).join(', ') + ' e mais ' + (names.length - 3) : names.join(', ');
+}
+function tasksFor(sector){ return S.tasks.filter(t => t.active !== false && visibleFor(t, sector)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); }
+function fillPeoplePick(){
+  const box = $('#tPeople'); if (!box) return;
+  const sups = S.cfg.supervisors || [];
+  const q = (S.tFind || '').toLowerCase();
+  const ps = Object.values(S.players).filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id) && nm(p.id).toLowerCase().includes(q)).sort((a,b)=>nm(a.id).localeCompare(nm(b.id)));
+  box.innerHTML = ps.length ? ['fin','chat'].map(k => { const g = ps.filter(p => p.sector === k); return g.length ? `<li style="border:0;padding:8px 2px 2px"><span class="sector-tag ${k}">${SECT[k].name}</span></li>` + g.map(p => `<li style="padding:6px 2px"><label class="check" style="margin:0;flex:1;cursor:pointer"><input type="checkbox" data-tsel="${p.id}" ${S.tSel.has(p.id)?'checked':''}> ${esc(nm(p.id))}</label></li>`).join('') : ''; }).join('')
+    : '<li class="empty">Nenhum colaborador encontrado.</li>';
+  const n = S.tSel.size; $('#tSelCount').textContent = n ? `${n} ${n===1?'pessoa selecionada':'pessoas selecionadas'}` : 'Marque quem deve receber a tarefa.';
+}
 const SUBLAB = { pendente:'Em análise', aprovada:'Aprovada', recusada:'Recusada' };
 function fillTasks(){
   const p = me(), sup = isSup();
@@ -584,8 +623,8 @@ function fillTasks(){
           <div class="row" style="gap:6px"><input type="file" id="sImg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr"><label for="sImg" class="btn ghost sm" style="flex:none" tabindex="0" id="sImgBtn">Anexar imagem</label>
           ${S.draft.image?'<button type="button" class="btn bad sm" style="flex:none" id="sImgDel">Remover</button>':''}</div></div>` : ''}
         <div class="row" style="margin-top:12px"><button class="btn" type="submit">Enviar para a supervisão</button><button class="btn ghost" type="button" id="sCancel">Cancelar</button></div></form>` : '';
-    return `<article class="ticket"><div class="body"><div class="meta" style="margin-top:0"><span class="sector-tag ${t.sector}">${SECT[t.sector]?.name||''}</span>
-      ${t.proof?'<span class="sector-tag ambos">Exige comprovação</span>':''}${t.repeat?'<span class="sector-tag ambos">Repetível</span>':''}</div>
+    return `<article class="ticket"><div class="body"><div class="meta" style="margin-top:0">${isIndividual(t)?'':`<span class="sector-tag ${t.sector}">${SECT[t.sector]?.name||''}</span>`}
+      ${isIndividual(t)?'<span class="sector-tag ambos">Individual</span>':''}${t.proof?'<span class="sector-tag ambos">Exige comprovação</span>':''}${t.repeat?'<span class="sector-tag ambos">Repetível</span>':''}</div>
       <h3>${esc(t.title)}</h3>${t.desc?`<p style="white-space:pre-wrap">${esc(t.desc)}</p>`:''}${form}</div>
       <div class="stub"><span class="reward">+${fmt(t.reward)} ${coin}</span>${action}</div></article>`;
   }).join('');
@@ -610,9 +649,10 @@ function loadProofs(list){
   need.forEach(x => { S.proofLoading.add(x.id); S.db.doc('proofs/'+x.id).get().then(s => { S.proofs[x.id] = s.exists ? s.data().image : null; S.proofLoading.delete(x.id); if (S.tab==='sup' && S.sub==='tarefas') keepFocus(fillSupTasks); }).catch(() => S.proofLoading.delete(x.id)); });
 }
 function fillSupTasks(){
+  fillPeoplePick();
   const ts = [...S.tasks].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   $('#taskList').innerHTML = ts.length ? ts.map(t => `<li><div class="grow"><div class="t">${esc(t.title)}${t.active===false?' <span class="hint">(oculta)</span>':''}</div>
-    <div class="s">+${fmt(t.reward)} Unicoins · ${SECT[t.sector]?.name}${t.proof?' · com comprovação':''}${t.repeat?' · repetível':''}</div></div>
+    <div class="s">+${fmt(t.reward)} Unicoins · Para: ${esc(audLabel(t))}${t.proof?' · com comprovação':''}${t.repeat?' · repetível':''}</div></div>
     <button class="btn ghost sm" data-tedit="${t.id}">Editar</button><button class="btn ghost sm" data-ttoggle="${t.id}">${t.active===false?'Mostrar':'Ocultar'}</button>
     <button class="btn bad sm" data-tdel="${t.id}" ${S.confirmTDel===t.id?'data-confirm="1"':''}>${S.confirmTDel===t.id?'Confirmar':'Excluir'}</button></li>`).join('')
     : '<li class="empty">Nenhuma tarefa ainda. Use o formulário para publicar a primeira.</li>';
@@ -621,9 +661,10 @@ function fillSupTasks(){
   $('#subPend').innerHTML = P.length ? P.map(x=>subBlock(x,true)).join('') : '<p class="empty">Nenhuma entrega aguardando conferência.</p>';
   $('#subDone').innerHTML = D.length ? D.map(x=>subBlock(x,false)).join('') : '<p class="empty">As entregas aprovadas ou recusadas ficam aqui.</p>';
 }
-function resetTaskForm(){ S.editingTask=null; $('#taskForm').reset(); $('#tActive').checked=true; $('#tFormTitle').textContent='Nova tarefa'; $('#tSave').textContent='Publicar tarefa'; $('#tCancel').hidden=true; }
+function setTMode(m){ S.tMode = m; document.querySelectorAll('[data-tmode]').forEach(b => b.setAttribute('aria-current', b.dataset.tmode === m)); $('#tModeSetor').hidden = m === 'pessoas'; $('#tModePessoas').hidden = m !== 'pessoas'; fillPeoplePick(); }
+function resetTaskForm(){ S.editingTask=null; S.tSel=new Set(); S.tFind=''; $('#taskForm').reset(); setTMode('setor'); $('#tActive').checked=true; $('#tFormTitle').textContent='Nova tarefa'; $('#tSave').textContent='Publicar tarefa'; $('#tCancel').hidden=true; }
 function editTask(id){ const t=S.tasks.find(x=>x.id===id); if(!t) return; S.editingTask=id;
-  $('#tTitle').value=t.title; $('#tDesc').value=t.desc||''; $('#tReward').value=t.reward; $('#tSector').value=t.sector; $('#tProof').checked=!!t.proof; $('#tRepeat').checked=!!t.repeat; $('#tActive').checked=t.active!==false;
+  $('#tTitle').value=t.title; $('#tDesc').value=t.desc||''; $('#tReward').value=t.reward; $('#tSector').value=t.sector; S.tSel=new Set(audOf(t).filter(x=>x.startsWith('uid:')).map(x=>x.slice(4))); S.tFind=''; $('#tFind').value=''; setTMode(isIndividual(t)?'pessoas':'setor'); $('#tProof').checked=!!t.proof; $('#tRepeat').checked=!!t.repeat; $('#tActive').checked=t.active!==false;
   $('#tFormTitle').textContent='Editar tarefa'; $('#tSave').textContent='Salvar alterações'; $('#tCancel').hidden=false; $('#tTitle').focus(); }
 async function decide(id, ok){ await guard(async () => {
   const reason = ok ? '' : (S.reasons[id]||'').trim().slice(0,200);
@@ -741,6 +782,7 @@ document.addEventListener('click', async e => {
   if (d.zoom) { const x=S.subs.find(s=>s.id===d.zoom); const v=x&&proofOf(x); if(v) zoom(v); return; }
   if (d.approve) return decide(d.approve, true);
   if (d.reject) return decide(d.reject, false);
+  if (d.tmode) return setTMode(d.tmode);
   if (d.tedit) return editTask(d.tedit);
   if (b.id === 'tCancel') return resetTaskForm();
   if (d.ttoggle) { const t=S.tasks.find(x=>x.id===d.ttoggle); return guard(()=>S.db.doc('tasks/'+d.ttoggle).update({active:t.active===false})); }
@@ -748,7 +790,7 @@ document.addEventListener('click', async e => {
     S.confirmTDel=d.tdel; fillSup(); setTimeout(()=>{ if(S.confirmTDel===d.tdel){ S.confirmTDel=null; if(S.sub==='tarefas') fillSup(); } },5000); return; }
   if (d.pick) { S.joinSector = d.pick; document.querySelectorAll('[data-pick]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.pick===d.pick)); return; }
   if (b.id === 'fImgDel') { S.formImg=null; $('#fImg').value=''; return setThumb(); }
-  if (d.release) return guard(async () => { const s=[...S.cfg.supervisors]; const i=s.findIndex(x=>!x); if(i<0) return toast('Os 3 acessos estão ocupados. Remova alguém antes de liberar.');
+  if (d.release) return guard(async () => { const s=[...S.cfg.supervisors]; const i=s.findIndex(x=>!x); if(i<0) return toast('Os 2 acessos estão ocupados. Remova alguém antes de liberar.');
     s[i]=d.release; await S.db.doc('config/main').set({ supervisors:s }); await S.db.doc('players/'+d.release).update({ supRequest:false }); toast(`${nm(d.release)} liberado no acesso ${i+1}.`); });
   if (d.deny) return guard(async () => { await S.db.doc('players/'+d.deny).update({ supRequest:false }); toast('Pedido recusado.'); });
   if (d.prev) { S.preview = d.prev; S.previewSet = true; return fill(); }
@@ -766,6 +808,7 @@ document.addEventListener('click', async e => {
 });
 
 document.addEventListener('change', e => {
+  if (e.target.dataset && e.target.dataset.tsel) { const id = e.target.dataset.tsel; if (e.target.checked) S.tSel.add(id); else S.tSel.delete(id); const n=S.tSel.size; $('#tSelCount').textContent = n ? `${n} ${n===1?'pessoa selecionada':'pessoas selecionadas'}` : 'Marque quem deve receber a tarefa.'; return; }
   if (e.target.id === 'sImg' && e.target.files[0]) { const f=e.target.files[0];
     if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
     readImage(f, 180000).then(u => { S.draft.image=u; fillTasks(); }).catch(()=>toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
@@ -775,7 +818,7 @@ document.addEventListener('change', e => {
   const m = e.target.dataset && e.target.dataset.move;
   if (m) guard(async()=>{ await S.db.doc('players/'+m).update({ sector:e.target.value }); toast('Setor atualizado.'); });
 });
-document.addEventListener('input', e => { if (e.target.id==='sNote') S.draft.note=e.target.value; if (e.target.dataset && e.target.dataset.reason) S.reasons[e.target.dataset.reason]=e.target.value; });
+document.addEventListener('input', e => { if (e.target.id==='tFind') { S.tFind = e.target.value; fillPeoplePick(); } if (e.target.id==='sNote') S.draft.note=e.target.value; if (e.target.dataset && e.target.dataset.reason) S.reasons[e.target.dataset.reason]=e.target.value; });
 
 document.addEventListener('keydown', e => { if ((e.target.id==='sImgBtn') && (e.key==='Enter'||e.key===' ')) { e.preventDefault(); return $('#sImg').click(); }
   if (e.target.id==='fImgBtn' && (e.key==='Enter'||e.key===' ')) { e.preventDefault(); $('#fImg').click(); } });
@@ -801,7 +844,14 @@ document.addEventListener('submit', e => {
   if (f.id === 'taskForm') return guard(async () => {
     const title=$('#tTitle').value.trim(), reward=parseInt($('#tReward').value,10);
     if (!title || !(reward>0)) return toast('Informe a tarefa e uma recompensa maior que zero.');
-    const data={ title, desc:$('#tDesc').value.trim(), reward, sector:$('#tSector').value, proof:$('#tProof').checked, repeat:$('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
+    let sector, audience;
+    if (S.tMode === 'pessoas') {
+      const ids = [...S.tSel].filter(id => S.players[id]);
+      if (!ids.length) return toast('Marque pelo menos um colaborador.');
+      const secs = [...new Set(ids.map(id => S.players[id].sector))];
+      sector = secs.length === 1 ? secs[0] : 'ambos'; audience = ids.map(id => 'uid:' + id);
+    } else { sector = $('#tSector').value; audience = sector === 'ambos' ? ['sec:fin','sec:chat'] : ['sec:' + sector]; }
+    const data={ title, desc:$('#tDesc').value.trim(), reward, sector, audience, proof:$('#tProof').checked, repeat:$('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
     if (S.editingTask) { await S.db.doc('tasks/'+S.editingTask).update(data); toast('Tarefa atualizada.'); }
     else { await S.db.collection('tasks').add({ ...data, createdAt:now() }); toast('Tarefa publicada.'); }
     resetTaskForm();
