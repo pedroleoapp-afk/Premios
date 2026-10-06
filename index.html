@@ -415,7 +415,10 @@ function buildSup(){
       <label class="f" for="bAmt">Unicoins por pessoa</label><input class="in" id="bAmt" type="number" min="1" step="1" required>
       <label class="f" for="bWhy">Motivo</label><input class="in" id="bWhy" maxlength="80" required placeholder="Ex.: Campanha do mês">
       <button class="btn warn" type="submit" style="margin-top:16px">Creditar setor</button>
-    </form></div>
+    </form>
+    ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Zerar moedas e ranking</h3>
+      <p class="hint" style="margin-top:-4px;font-size:14px">Zera o saldo e os pontos do ranking. Use para começar uma nova temporada. Não tem como desfazer, mas tudo fica registrado no extrato.</p>
+      <div class="row"><button class="btn bad" data-reset="fin">Zerar Financeiro</button><button class="btn bad" data-reset="chat">Zerar Chat</button><button class="btn bad" data-reset="all">Zerar todos</button></div></section>` : ''}</div>
     <section class="panel"><h3>Colaboradores</h3><ul class="list" id="playerList"></ul><h3 style="margin-top:22px">Movimentações recentes</h3><ul class="list" id="ledgerList"></ul></section></div>`;
   if (S.sub === 'tarefas') h += `<div class="cols">
     <form class="panel" id="taskForm" autocomplete="off"><h3 id="tFormTitle">Nova tarefa</h3>
@@ -519,8 +522,8 @@ function fillMine(){
 function fillRank(){
   const secs = isSup() ? ['fin','chat'] : [me().sector];
   $('#rank').innerHTML = secs.map(k => {
-    const ps = Object.values(S.players).filter(p=>p.sector===k).sort((a,b)=>earned(b.id)-earned(a.id)).slice(0,10);
-    return `<section class="panel"><h3><span class="sector-tag ${k}">${SECT[k].name}</span></h3><ul class="list">${ps.length ? ps.map((p,i)=>`<li><span class="pos ${i===0?'p1':''}">${i+1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém deste setor entrou ainda.</li>'}</ul></section>`;
+    const ps = Object.values(S.players).filter(p=>p.sector===k && earned(p.id) > 0).sort((a,b)=>earned(b.id)-earned(a.id)).slice(0,10);
+    return `<section class="panel"><h3><span class="sector-tag ${k}">${SECT[k].name}</span></h3><ul class="list">${ps.length ? ps.map((p,i)=>`<li><span class="pos ${i===0?'p1':''}">${i+1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém pontuou ainda neste setor.</li>'}</ul></section>`;
   }).join('');
 }
 function fillSup(){
@@ -544,7 +547,7 @@ function fillSup(){
     sel.value = keep;
     $('#playerList').innerHTML = ps.length ? ps.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · ganhou ${fmt(earned(p.id))} no total</div></div>
       <select class="in" style="width:auto;flex:none" data-move="${p.id}" aria-label="Setor de ${esc(nm(p.id))}"><option value="fin" ${p.sector==='fin'?'selected':''}>Financeiro</option><option value="chat" ${p.sector==='chat'?'selected':''}>Chat</option></select>
-      <span class="price" style="font-size:18px">${coin}${fmt(bal(p.id))}</span></li>`).join('') : '<li class="empty">Quando os colaboradores abrirem o link e escolherem o setor, eles aparecem aqui.</li>';
+      <span class="price" style="font-size:18px">${coin}${fmt(bal(p.id))}</span>${S.owner ? `<button class="btn bad sm" style="flex:none" data-rp="${p.id}" ${S.confirmRp===p.id?'data-confirm="1"':''}>${S.confirmRp===p.id?'Confirmar':'Zerar'}</button>` : ''}</li>`).join('') : '<li class="empty">Quando os colaboradores abrirem o link e escolherem o setor, eles aparecem aqui.</li>';
     const L = S.ledger.slice(0,40);
     $('#ledgerList').innerHTML = L.length ? L.map(l=>ledgerLi(l,true)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
   }
@@ -738,6 +741,19 @@ async function bulkCredit(ids, amt, why){
   }
 }
 
+async function resetPlayers(ids){
+  const targets = ids.map(id => S.players[id]).filter(p => p && ((p.balance||0) !== 0 || (p.earned||0) !== 0));
+  for (let i = 0; i < targets.length; i += 200) {
+    const batch = writeBatch(fdb), t = now();
+    targets.slice(i, i + 200).forEach(p => {
+      batch.update(doc(fdb,'players',p.id), { balance:0, earned:0 });
+      if (p.balance) batch.set(doc(collection(fdb,'ledger')), { player:p.id, amount:-(p.balance||0), kind:'reset', reason:'Moedas zeradas pela supervisão', by:S.me, at:t });
+    });
+    await batch.commit();
+  }
+  return targets.length;
+}
+
 async function settle(rid, ok){ await guard(async () => {
   const msg = await runTransaction(fdb, async tx => {
     const rRef = doc(fdb,'redemptions',rid), rs = await tx.get(rRef);
@@ -783,6 +799,17 @@ document.addEventListener('click', async e => {
   if (d.approve) return decide(d.approve, true);
   if (d.reject) return decide(d.reject, false);
   if (d.tmode) return setTMode(d.tmode);
+  if (d.reset && S.owner) {
+    const label = { fin:'do Financeiro', chat:'do Chat', all:'de todos' }[d.reset];
+    if (!d.confirm) { b.dataset.confirm = '1'; const old = b.textContent; b.textContent = 'Confirmar: zerar ' + label; setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = old; } }, 5000); return; }
+    return guard(async () => { const ids = Object.values(S.players).filter(p => d.reset === 'all' || p.sector === d.reset).map(p => p.id);
+      const n = await resetPlayers(ids); toast(n ? `Moedas e ranking zerados ${label} (${n} ${n===1?'pessoa':'pessoas'}).` : 'Já estava tudo zerado.'); });
+  }
+  if (d.rp && S.owner) {
+    if (!d.confirm) { S.confirmRp = d.rp; fillSup(); setTimeout(() => { if (S.confirmRp === d.rp) { S.confirmRp = null; if (S.sub === 'moedas') fillSup(); } }, 5000); return; }
+    S.confirmRp = null;
+    return guard(async () => { const n = await resetPlayers([d.rp]); toast(n ? `${nm(d.rp)} foi zerado e saiu do ranking.` : `${nm(d.rp)} já estava zerado.`); });
+  }
   if (d.tedit) return editTask(d.tedit);
   if (b.id === 'tCancel') return resetTaskForm();
   if (d.ttoggle) { const t=S.tasks.find(x=>x.id===d.ttoggle); return guard(()=>S.db.doc('tasks/'+d.ttoggle).update({active:t.active===false})); }
