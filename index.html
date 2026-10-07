@@ -159,6 +159,27 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:10;max-width:90vw}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .check{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
+.mural{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--gold);border-radius:14px;padding:14px 18px;margin-bottom:22px;box-shadow:var(--shadow)}
+.mural b{font-family:"Bricolage Grotesque",sans-serif;font-size:15px}
+.mural p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.previewbar{background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.previewbar span{flex:1 1 220px;font-weight:600}
+.previewbar .btn{background:var(--bg);color:var(--ink)}
+.previewbar .btn[aria-current="true"]{background:var(--gold);color:#3E2C00}
+.sector-tag.new{background:var(--gold);color:#3E2C00}
+.sector-tag.late{background:#F9DEDB;color:#8A231D}
+.status.separacao{background:#DDE8FB;color:#1B4FA8}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface2);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font:800 30px/1.05 "Bricolage Grotesque",sans-serif;letter-spacing:-.02em}
+.kpi span{color:var(--muted);font-size:13px}
+.prog{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:8px}
+.prog div{display:flex;justify-content:space-between;gap:8px;align-items:center;background:var(--surface2);border-radius:10px;padding:8px 10px;font-size:14px}
+.podium{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.podium span{background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:13px}
+.tag-role{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);margin-left:6px}
+.tag-role.blocked{background:#F9DEDB;color:#8A231D}
+.in.sm{padding:6px 9px;font-size:14px}
 </style>
 </head>
 <body>
@@ -166,6 +187,7 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
   <header class="top">
     <div class="brand"><span class="coin" aria-hidden="true">U</span><h1>Unicoins</h1></div>
     <span class="role" id="role">Carregando…</span>
+    <button class="btn ghost sm" id="viewBtn" hidden>Prévia do colaborador</button>
     <button class="btn ghost sm" id="logout" hidden>Sair</button>
     <nav class="tabs" id="tabs" aria-label="Seções"></nav>
   </header>
@@ -176,8 +198,7 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 
 <script type="module">
 /* =====================================================================
-   CONFIGURAÇÃO — preencha com os dados do seu projeto Firebase
-   (Console do Firebase › Configurações do projeto › Seus apps › Web)
+   CONFIGURAÇÃO — dados do projeto Firebase
    ===================================================================== */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCLGvBZgq0BwY_Ph7UtXT5EVqUicphZPfI",
@@ -188,69 +209,109 @@ const FIREBASE_CONFIG = {
   appId: "1:873110414678:web:442fdd7d76b201c62ce2f7",
   measurementId: "G-P1980MEB5T"
 };
-/* UID da conta do administrador (o mesmo que vai no arquivo firestore.rules) */
+/* UID da conta do administrador (o mesmo do arquivo firestore.rules) */
 const ADMIN_UIDS = ["BqiKenEb0RO75NZqJLmwyJ1yOwh1"];
-/* Opcional: limitar cadastro a e-mails corporativos. Ex.: ["uniasselvi.com.br", "vitru.com.br"]. Vazio = qualquer e-mail. */
+/* Opcional: limitar cadastro a e-mails corporativos. Ex.: ["uniasselvi.com.br"]. Vazio = qualquer e-mail. */
 const ALLOWED_EMAIL_DOMAINS = [];
 /* ===================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, setDoc, updateDoc, deleteDoc, addDoc, runTransaction, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, runTransaction, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const SECT = { fin:{name:'Financeiro'}, chat:{name:'Chat Uniasselvi'}, ambos:{name:'Ambos os setores'} };
-const S = { db:null, user:null, me:null, owner:false, cfg:{supervisors:[null,null]}, items:[], players:{}, reds:[], ledger:[],
-  names:{}, pendingNames:new Set(), tab:'loja', sub:'tarefas', preview:'fin', editing:null, busy:false, confirmId:null, searchHits:[], tasks:[], subs:[], openTask:null, tMode:'setor', tSel:new Set(), tFind:'', draft:{note:'',image:null}, editingTask:null, reasons:{}, loaded:false, joinSector:null, formImg:null };
+const SECT = { fin:{ name:'Financeiro' }, chat:{ name:'Chat Uniasselvi' }, ambos:{ name:'Ambos os setores' } };
+const RED_LAB = { pendente:'Aguardando', separacao:'Em separação', entregue:'Entregue', recusada:'Recusada · estornado' };
+const SUB_LAB = { pendente:'Em análise', aprovada:'Aprovada', recusada:'Recusada' };
+
+const S = {};
+function resetState(){
+  Object.assign(S, {
+    me:null, email:'', owner:false, mine:null, gotCfg:false, gotMine:false,
+    cfg:{ supervisors:[null,null], seasonKey:'', seasonName:'', seasonStart:0 }, notice:null, seasons:[],
+    players:{}, items:[], tasks:[], tasksSec:[], tasksMine:[], reds:[], redsOpen:[], redsRecent:[], ledger:[],
+    subs:[], subsPend:[], subsRecent:[], audit:[], proofs:{}, proofLoading:new Set(),
+    tab:'loja', sub:'tarefas', viewAs:null, preview:null,
+    editing:null, formImg:null, editingTask:null, tMode:'setor', tSel:new Set(), tFind:'',
+    openTask:null, draft:{ note:'', image:null }, reasons:{}, obs:{}, names:{}, muralDraft:null,
+    confirmId:null, confirmDel:null, confirmTDel:null, confirmRp:null, confirmBlock:null,
+    progressTask:null, progressSubs:[], kpi:null, kpiLoading:false, pFind:'',
+    newItems:new Set(), newTasks:new Set(), busy:false, loaded:false, emailFixing:false, joinSector:null
+  });
+}
+resetState();
 
 const $ = s => document.querySelector(s);
-const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = n => Number(n||0).toLocaleString('pt-BR');
-const when = t => t ? new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const fmt = n => Number(n || 0).toLocaleString('pt-BR');
+const when = t => t ? new Date(t).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+const dateBR = t => t ? new Date(t).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
 const coin = '<span class="coin" aria-hidden="true">U</span>';
-const isSup = () => S.owner || (S.me && (S.cfg.supervisors||[]).includes(S.me));
+const now = () => Date.now();
+const isSup = () => S.owner || (!!S.me && S.cfg.supervisors.includes(S.me));
 const me = () => S.mine;
-const nm = id => (S.players[id] && S.players[id].name) || S.names[id] || (id === S.me ? 'Você' : 'Colaborador');
+const isBlocked = () => !!(S.mine && S.mine.blocked) && !isSup();
+const canAct = () => !S.viewAs && !!me() && !me().blocked;
+const nm = id => (S.players[id] && S.players[id].name) || (ADMIN_UIDS.includes(id) ? 'Administrador' : id === S.me ? 'Você' : 'Colaborador');
 const safeImg = v => typeof v === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) ? v : null;
+const bal = id => Number((S.players[id] && S.players[id].balance) || 0);
+const earned = id => Number((S.players[id] && S.players[id].earned) || 0);
+const isEarnKind = k => k === 'credit' || k === 'bulk' || k === 'task';
+const byAtDesc = (a, b) => (b.at || 0) - (a.at || 0);
 let toastT;
-function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3200); }
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3600); }
+function viewSector(){
+  if (S.viewAs) return S.viewAs;
+  if (isSup()) return S.preview || (me() && me().sector) || 'fin';
+  return me() ? me().sector : 'fin';
+}
+const seasonLabel = () => S.cfg.seasonName || 'Temporada atual';
+
+/* ---------- Novidades (marcador "Nova") ---------- */
+const seenKey = () => 'unicoins_seen_' + S.me;
+function getSeen(){ try { const v = JSON.parse(localStorage.getItem(seenKey()) || 'null'); if (v) return v; } catch(e){} const v = { items:now(), tasks:now() }; try { localStorage.setItem(seenKey(), JSON.stringify(v)); } catch(e){} return v; }
+function setSeen(kind){ const v = getSeen(); v[kind] = now(); try { localStorage.setItem(seenKey(), JSON.stringify(v)); } catch(e){} }
 
 /* ---------- Firebase ---------- */
 const configured = !String(FIREBASE_CONFIG.apiKey).startsWith('COLE');
 let fdb = null, auth = null;
-const P = path => path.split('/');
-/* Pequeno adaptador para manter o restante do código simples */
-const wrap = s => ({ id:s.id, exists:s.exists(), data:() => s.data() });
-const dbApi = {
-  doc: path => { const r = doc(fdb, ...P(path)); return { id:r.id, ref:r, get:() => getDoc(r).then(wrap), set:v => setDoc(r, v), update:v => updateDoc(r, v), delete:() => deleteDoc(r) }; },
-  collection: path => { const c = collection(fdb, ...P(path)); return { doc:id => dbApi.doc(path + '/' + (id || doc(c).id)), add:v => addDoc(c, v) }; }
-};
-const now = () => Date.now();
-
-/* ---------- Boot ---------- */
-let base = [], live = [], liveKey = '';
-function stopAll(){ base.forEach(u => u()); live.forEach(u => u()); base = []; live = []; liveKey = ''; }
-function resetState(){ Object.assign(S, { me:null, owner:false, mine:null, gotCfg:false, gotMine:false, cfg:{supervisors:[null,null]}, items:[], players:{}, reds:[], ledger:[], tasks:[], subs:[], subsPend:[], subsRecent:[], proofs:{}, loaded:false, tab:'loja', sub:'tarefas', editing:null, editingTask:null, openTask:null }); }
+let base = [], live = [], liveKey = '', progUnsub = null;
+function stopAll(){ base.forEach(u => u()); live.forEach(u => u()); if (progUnsub) progUnsub(); base = []; live = []; liveKey = ''; progUnsub = null; }
 
 if (!configured) {
   notice('Falta configurar o Firebase. Preencha FIREBASE_CONFIG no início do arquivo index.html.');
 } else {
   const app = initializeApp(FIREBASE_CONFIG);
-  auth = getAuth(app); fdb = getFirestore(app); S.db = dbApi;
+  auth = getAuth(app); fdb = getFirestore(app);
   onAuthStateChanged(auth, u => {
     stopAll(); resetState();
-    $('#logout').hidden = !u;
+    $('#logout').hidden = !u; $('#viewBtn').hidden = true;
     if (!u) return showLogin();
-    if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(d => (u.email||'').toLowerCase().endsWith('@' + d.toLowerCase()))) {
+    if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(d => (u.email || '').toLowerCase().endsWith('@' + d.toLowerCase()))) {
       signOut(auth); return showLogin('Use seu e-mail corporativo (' + ALLOWED_EMAIL_DOMAINS.map(d => '@' + d).join(', ') + ').');
     }
     S.me = u.uid; S.owner = ADMIN_UIDS.includes(u.uid); S.email = u.email || '';
     setupBanner();
     $('#role').textContent = 'Carregando…'; $('#main').innerHTML = '<p class="hint">Abrindo o balcão de prêmios…</p>';
-    base.push(onSnapshot(doc(fdb, 'config', 'main'), s => { const d = s.exists() ? s.data() : {}; const raw = d.supervisors || [];
-      const sv = raw.filter(Boolean).slice(0,2); while (sv.length < 2) sv.push(null);
-      S.cfg = { supervisors:sv };
-      if (S.owner && s.exists() && (raw.length > 2 || raw.some((x,i) => x !== sv[i]))) setDoc(doc(fdb,'config','main'), { supervisors:sv }).catch(()=>{}); S.gotCfg = true; resub(); changed(); }, onErr));
-    base.push(onSnapshot(doc(fdb, 'players', S.me), s => { S.mine = s.exists() ? { id:s.id, ...s.data() } : null; if (S.mine) S.players[S.me] = S.mine; S.gotMine = true; resub(); changed(); }, onErr));
+    base.push(onSnapshot(doc(fdb, 'config', 'main'), s => {
+      const d = s.exists() ? s.data() : {};
+      const raw = Array.isArray(d.supervisors) ? d.supervisors : [];
+      const sv = raw.filter(Boolean).slice(0, 2); while (sv.length < 2) sv.push(null);
+      S.cfg = { supervisors:sv, seasonKey:d.seasonKey || '', seasonName:d.seasonName || '', seasonStart:d.seasonStart || 0 };
+      if (S.owner && (!d.seasonKey || raw.length !== 2 || raw.some((x, i) => x !== sv[i]))) {
+        setDoc(doc(fdb, 'config', 'main'), { supervisors:sv, seasonKey:d.seasonKey || 'S1', seasonName:d.seasonName || 'Temporada 1', seasonStart:d.seasonStart || now() }).catch(e => console.error(e));
+      }
+      S.gotCfg = true; resub(); changed();
+    }, onErr));
+    base.push(onSnapshot(doc(fdb, 'config', 'notice'), s => { S.notice = s.exists() ? s.data() : null; changed(); }, e => console.error(e)));
+    base.push(onSnapshot(query(collection(fdb, 'seasons'), orderBy('endedAt', 'desc'), limit(12)), q => { S.seasons = q.docs.map(d => ({ id:d.id, ...d.data() })); changed(); }, e => console.error(e)));
+    base.push(onSnapshot(doc(fdb, 'players', S.me), s => {
+      S.mine = s.exists() ? { id:s.id, ...s.data() } : null;
+      if (S.mine) {
+        S.players[S.me] = S.mine;
+        if (S.email && S.mine.email !== S.email && !S.emailFixing) { S.emailFixing = true; updateDoc(doc(fdb, 'players', S.me), { email:S.email }).catch(() => {}).finally(() => S.emailFixing = false); }
+      }
+      S.gotMine = true; resub(); changed();
+    }, onErr));
   });
 }
 
@@ -261,42 +322,59 @@ function onErr(e){
 }
 
 const list = (q, fn) => live.push(onSnapshot(q, snap => { fn(snap.docs.map(d => ({ id:d.id, ...d.data() }))); changed(); }, onErr));
-const byAtDesc = (a, b) => (b.at||0) - (a.at||0);
+function mergeSubs(){ const m = new Map(); [...S.subsPend, ...S.subsRecent].forEach(x => m.set(x.id, x)); S.subs = [...m.values()].sort(byAtDesc); }
+function mergeReds(){ const m = new Map(); [...S.redsOpen, ...S.redsRecent].forEach(x => m.set(x.id, x)); S.reds = [...m.values()].sort(byAtDesc); }
+function mergeTasks(){ const m = new Map(); [...S.tasksSec, ...S.tasksMine].forEach(t => m.set(t.id, t)); S.tasks = [...m.values()]; }
+
 function resub(){
   if (!S.gotCfg || !S.gotMine) return;
-  const key = (isSup() ? 'sup' : 'col') + '|' + (S.mine ? S.mine.sector : '-');
+  const key = [isSup() ? 'sup' : 'col', S.mine ? S.mine.sector : '-', isBlocked() ? 'b' : '', S.owner ? 'o' : ''].join('|');
   if (key === liveKey) return;
-  live.forEach(u => u()); live = []; liveKey = key;
-  Object.assign(S, { items:[], players:S.mine ? { [S.me]:S.mine } : {}, reds:[], ledger:[], tasks:[], subs:[], subsPend:[], subsRecent:[] });
+  live.forEach(u => u()); live = []; liveKey = key; closeProgress();
+  Object.assign(S, { players:S.mine ? { [S.me]:S.mine } : {}, items:[], tasks:[], tasksSec:[], tasksMine:[], reds:[], redsOpen:[], redsRecent:[], ledger:[], subs:[], subsPend:[], subsRecent:[], audit:[] });
   const C = n => collection(fdb, n);
-  const mergeSubs = () => { const m = new Map(); [...S.subsPend, ...S.subsRecent].forEach(x => m.set(x.id, x)); S.subs = [...m.values()].sort(byAtDesc); };
   if (isSup()) {
-    list(C('players'), a => { const o = {}; a.forEach(p => o[p.id] = p); if (S.mine) o[S.me] = S.mine; S.players = o; });
+    list(C('players'), a => { const o = {}; a.forEach(p => o[p.id] = p); S.players = o; });
     list(C('items'), a => S.items = a);
     list(C('tasks'), a => { S.tasks = a; migrateTasks(); });
-    list(query(C('redemptions'), where('status','==','pendente')), a => { S.redsPend = a; S.reds = [...a, ...(S.redsDone||[])].sort(byAtDesc); });
-    list(query(C('redemptions'), orderBy('at','desc'), limit(120)), a => { S.redsDone = a.filter(r => r.status !== 'pendente'); S.reds = [...(S.redsPend||[]), ...S.redsDone].sort(byAtDesc); });
-    list(query(C('ledger'), orderBy('at','desc'), limit(150)), a => S.ledger = a);
-    list(query(C('submissions'), where('status','==','pendente')), a => { S.subsPend = a; mergeSubs(); });
-    list(query(C('submissions'), orderBy('at','desc'), limit(60)), a => { S.subsRecent = a; mergeSubs(); });
-  } else if (S.mine) {
+    list(query(C('redemptions'), where('status', 'in', ['pendente', 'separacao'])), a => { S.redsOpen = a; mergeReds(); });
+    list(query(C('redemptions'), orderBy('at', 'desc'), limit(150)), a => { S.redsRecent = a; mergeReds(); });
+    list(query(C('ledger'), orderBy('at', 'desc'), limit(150)), a => S.ledger = a);
+    list(query(C('submissions'), where('status', '==', 'pendente')), a => { S.subsPend = a; mergeSubs(); });
+    list(query(C('submissions'), orderBy('at', 'desc'), limit(60)), a => { S.subsRecent = a; mergeSubs(); });
+    if (S.owner) list(query(C('audit'), orderBy('at', 'desc'), limit(150)), a => S.audit = a);
+  } else if (S.mine && !isBlocked()) {
     const sec = S.mine.sector;
-    list(query(C('players'), where('sector','==',sec)), a => { const o = {}; a.forEach(p => o[p.id] = p); o[S.me] = S.mine; S.players = o; });
-    list(query(C('items'), where('sector','in',['ambos',sec])), a => S.items = a);
-    const mergeTasks = () => { const m = new Map(); [...(S.tasksSec||[]), ...(S.tasksMine||[])].forEach(t => m.set(t.id, t)); S.tasks = [...m.values()]; };
-    list(query(C('tasks'), where('audience','array-contains','sec:'+sec)), a => { S.tasksSec = a; mergeTasks(); });
-    list(query(C('tasks'), where('audience','array-contains','uid:'+S.me)), a => { S.tasksMine = a; mergeTasks(); });
-    list(query(C('redemptions'), where('player','==',S.me)), a => S.reds = a.sort(byAtDesc));
-    list(query(C('ledger'), where('player','==',S.me)), a => S.ledger = a.sort(byAtDesc));
-    list(query(C('submissions'), where('player','==',S.me)), a => { S.subsRecent = a; mergeSubs(); });
+    list(query(C('players'), where('sector', '==', sec)), a => { const o = {}; a.forEach(p => o[p.id] = p); o[S.me] = S.mine; S.players = o; });
+    list(query(C('items'), where('sector', 'in', ['ambos', sec])), a => S.items = a);
+    list(query(C('tasks'), where('audience', 'array-contains', 'sec:' + sec)), a => { S.tasksSec = a; mergeTasks(); });
+    list(query(C('tasks'), where('audience', 'array-contains', 'uid:' + S.me)), a => { S.tasksMine = a; mergeTasks(); });
+    list(query(C('redemptions'), where('player', '==', S.me)), a => S.reds = a.sort(byAtDesc));
+    list(query(C('ledger'), where('player', '==', S.me)), a => S.ledger = a.sort(byAtDesc));
+    list(query(C('submissions'), where('player', '==', S.me)), a => { S.subsRecent = a; mergeSubs(); });
   }
   S.loaded = true; build();
 }
 
-function notice(msg){ $('#role').textContent='Unicoins'; $('#tabs').innerHTML=''; $('#main').innerHTML=`<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">${esc(msg)}</h2></div>`; }
+let tasksMigrated = false;
+function migrateTasks(){
+  if (tasksMigrated || !isSup()) return; tasksMigrated = true;
+  S.tasks.filter(t => !Array.isArray(t.audience)).forEach(t => updateDoc(doc(fdb, 'tasks', t.id), { audience:audOf(t) }).catch(() => { tasksMigrated = false; }));
+}
+
+/* ---------- Registro de ações da supervisão ---------- */
+function audit(action, detail){
+  if (!isSup() || !fdb) return;
+  addDoc(collection(fdb, 'audit'), { by:S.me, byName:nm(S.me), action, detail:String(detail || '').slice(0, 300), at:now() }).catch(e => console.error(e));
+}
+function cfgWrite(patch){
+  return setDoc(doc(fdb, 'config', 'main'), { supervisors:S.cfg.supervisors, seasonKey:S.cfg.seasonKey || 'S1', seasonName:S.cfg.seasonName || 'Temporada 1', seasonStart:S.cfg.seasonStart || now(), ...patch });
+}
+
+function notice(msg){ $('#role').textContent = 'Unicoins'; $('#tabs').innerHTML = ''; $('#main').innerHTML = `<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">${esc(msg)}</h2></div>`; }
 function setupBanner(){
   const b = $('#setupBanner');
-  b.innerHTML = ADMIN_UIDS.some(x => x.startsWith('COLE')) && S.me ? `<div class="setup"><b>Configuração inicial:</b> o UID desta conta é <code id="myUid">${esc(S.me)}</code> <button class="btn ghost sm" id="copyUid">Copiar</button><br>Se esta é a conta do administrador, cole o UID em <code>ADMIN_UIDS</code> no index.html e no arquivo <code>firestore.rules</code>.</div>` : '';
+  b.innerHTML = ADMIN_UIDS.some(x => x.startsWith('COLE')) && S.me ? `<div class="setup"><b>Configuração inicial:</b> o UID desta conta é <code>${esc(S.me)}</code> <button class="btn ghost sm" id="copyUid">Copiar</button><br>Se esta é a conta do administrador, cole o UID em <code>ADMIN_UIDS</code> no index.html e no arquivo <code>firestore.rules</code>.</div>` : '';
 }
 
 /* ---------- Login ---------- */
@@ -304,8 +382,8 @@ const AUTH_ERR = {
   'auth/invalid-credential':'E-mail ou senha incorretos.', 'auth/wrong-password':'E-mail ou senha incorretos.', 'auth/user-not-found':'E-mail ou senha incorretos.',
   'auth/email-already-in-use':'Este e-mail já tem conta. Use Entrar.', 'auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.',
   'auth/invalid-email':'Digite um e-mail válido.', 'auth/missing-password':'Digite a senha.', 'auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos.',
-  'auth/operation-not-allowed':'Este tipo de login não está ativado no Firebase (Authentication › Sign-in method).',
-  'auth/unauthorized-domain':'Este endereço não está autorizado. Adicione-o em Authentication › Settings › Authorized domains.',
+  'auth/operation-not-allowed':'Este tipo de login não está ativado no Firebase (Authentication › Método de login).',
+  'auth/unauthorized-domain':'Este endereço não está autorizado. Adicione-o em Authentication › Configurações › Domínios autorizados.',
   'auth/network-request-failed':'Sem conexão. Verifique a internet.'
 };
 const authMsg = e => AUTH_ERR[e && e.code] || 'Não foi possível entrar. Tente de novo.';
@@ -323,36 +401,75 @@ function showLogin(msg){
   if (msg) toast(msg);
 }
 
-const isEarnKind = k => k === 'credit' || k === 'bulk' || k === 'task';
-const bal = id => Number((S.players[id] && S.players[id].balance) || 0);
-const earned = id => Number((S.players[id] && S.players[id].earned) || 0);
-function avail(i){ return i.stock === null || i.stock === undefined ? null : Math.max(0, i.stock); }
-S.proofs = {}; S.proofLoading = new Set();
-
-let lastShape = '';
-function changed(){
-  if (!S.loaded) return;
-  const shape = [isSup(), !!me(), S.tab, S.sub].join('|');
-  if (shape !== lastShape) build(); else fill();
+/* ---------- Tarefas: público e prazo ---------- */
+const audOf = t => Array.isArray(t.audience) ? t.audience : (t.sector === 'ambos' ? ['sec:fin', 'sec:chat'] : ['sec:' + t.sector]);
+const isIndividual = t => audOf(t).some(a => a.startsWith('uid:'));
+const isExpired = t => !!t.deadlineAt && now() > t.deadlineAt;
+const supIds = () => S.cfg.supervisors.filter(Boolean);
+function visibleFor(t, sector){
+  const a = audOf(t);
+  if (a.includes('sec:' + sector)) return true;
+  if (S.viewAs) return false;
+  const p = me();
+  if (p && p.sector === sector && a.includes('uid:' + S.me)) return true;
+  return isSup() && a.some(x => x.startsWith('uid:') && S.players[x.slice(4)] && S.players[x.slice(4)].sector === sector);
 }
-function requestNames(){}
-let tasksMigrated = false;
-function migrateTasks(){
-  if (tasksMigrated || !isSup()) return; tasksMigrated = true;
-  S.tasks.filter(t => !Array.isArray(t.audience)).forEach(t => updateDoc(doc(fdb,'tasks',t.id), { audience: audOf(t) }).catch(()=>{ tasksMigrated = false; }));
+function audLabel(t){
+  const a = audOf(t);
+  if (!isIndividual(t)) return a.length > 1 ? 'Ambos os setores' : (SECT[a[0].slice(4)] || {}).name || '';
+  const names = a.filter(x => x.startsWith('uid:')).map(x => nm(x.slice(4)));
+  return names.length > 3 ? names.slice(0, 3).join(', ') + ' e mais ' + (names.length - 3) : names.join(', ');
 }
+function audiencePlayers(t){
+  const a = audOf(t), sups = supIds();
+  return Object.values(S.players).filter(p => !p.blocked && !ADMIN_UIDS.includes(p.id) && !sups.includes(p.id) && (a.includes('sec:' + p.sector) || a.includes('uid:' + p.id)))
+    .sort((x, y) => nm(x.id).localeCompare(nm(y.id)));
+}
+const hasRedeemed = itemId => S.reds.some(r => r.item === itemId && r.player === S.me && r.season === S.cfg.seasonKey && r.status !== 'recusada');
 
 /* ---------- Layout ---------- */
+let lastShape = '';
+const shape = () => [isSup(), !!me(), isBlocked(), S.tab, S.sub, S.viewAs].join('|');
+function changed(){ if (!S.loaded) return; if (shape() !== lastShape) build(); else fill(); }
+
 function tabsFor(){
-  let t = [['loja','Loja'],['tarefas','Tarefas'],['meus','Meus resgates'],['ranking','Ranking']];
-  if (isSup()) t.push(['sup','Supervisão']);
-  if (isSup() && !me()) t = t.filter(x => x[0] !== 'meus');
+  if (S.viewAs) return [['loja', 'Loja'], ['tarefas', 'Tarefas'], ['ranking', 'Ranking']];
+  let t = [['loja', 'Loja'], ['tarefas', 'Tarefas'], ['meus', 'Meus resgates'], ['ranking', 'Ranking']];
+  if (!me()) t = t.filter(x => x[0] !== 'meus');
+  if (isSup()) t.push(['sup', 'Supervisão']);
   return t;
 }
-function build(){
-  lastShape = [isSup(), !!me(), S.tab, S.sub].join('|');
+function newCount(kind){
+  if (isSup() || !canAct()) return 0;
+  const seen = getSeen()[kind];
+  if (kind === 'items') return S.items.filter(i => i.active !== false && (i.createdAt || 0) > seen).length;
+  return S.tasks.filter(t => t.active !== false && !isExpired(t) && (t.createdAt || 0) > seen).length;
+}
+function supCount(){ return S.redsOpen.filter(r => r.status === 'pendente').length + S.subsPend.length; }
+function tabBadges(){
+  const set = (k, n) => { const el = document.getElementById('badge-' + k); if (el) el.innerHTML = n ? ` <span class="count">${n}</span>` : ''; };
+  set('loja', S.tab === 'loja' ? 0 : newCount('items')); set('tarefas', S.tab === 'tarefas' ? 0 : newCount('tasks')); set('sup', supCount());
+}
+function markSeen(kind){
+  if (isSup() || !canAct()) { S[kind === 'items' ? 'newItems' : 'newTasks'] = new Set(); return; }
+  const seen = getSeen()[kind], src = kind === 'items' ? S.items : S.tasks;
+  S[kind === 'items' ? 'newItems' : 'newTasks'] = new Set(src.filter(x => (x.createdAt || 0) > seen).map(x => x.id));
+  setSeen(kind);
+}
+
+function renderHeader(){
   const sup = isSup(), p = me();
-  $('#role').textContent = S.owner ? 'Administrador' : sup ? 'Supervisão' : p ? (p.name||'Colaborador') + ' · ' + SECT[p.sector].name + (p.supRequest ? ' · supervisão aguardando liberação' : '') : 'Novo por aqui';
+  $('#role').textContent = S.viewAs ? 'Prévia · ' + SECT[S.viewAs].name : S.owner ? 'Administrador' : sup ? 'Supervisão' : p ? (p.name || 'Colaborador') + ' · ' + SECT[p.sector].name + (p.supRequest ? ' · supervisão aguardando liberação' : '') : 'Novo por aqui';
+  $('#viewBtn').hidden = !sup || !!S.viewAs;
+}
+const previewBar = () => S.viewAs ? `<div class="previewbar"><span>Prévia: você está vendo o Unicoins como um colaborador do ${SECT[S.viewAs].name}. Trocas e envios ficam desativados.</span>
+  ${['fin', 'chat'].map(k => `<button class="btn sm" data-viewas="${k}" aria-current="${S.viewAs === k}">${SECT[k].name}</button>`).join('')}<button class="btn sm" id="exitView">Sair da prévia</button></div>` : '';
+
+function build(){
+  lastShape = shape();
+  const sup = isSup(), p = me();
+  renderHeader();
+  if (isBlocked()) { $('#tabs').innerHTML = ''; $('#main').innerHTML = `<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">Seu acesso ao Unicoins foi removido.</h2><p class="hint">Se achar que é um engano, fale com a supervisão.</p></div>`; return; }
   if (!sup && !p) {
     $('#tabs').innerHTML = '';
     $('#main').innerHTML = `<div class="notice"><span class="coin big spin" aria-hidden="true">U</span>
@@ -360,8 +477,8 @@ function build(){
       <p class="hint">Seus Unicoins e os prêmios disponíveis dependem do setor. Só a supervisão pode mudar o setor depois.</p>
       <form id="joinForm" class="joinform" autocomplete="off">
         <label class="f" for="jName">Seu nome</label><input class="in" id="jName" required maxlength="60" placeholder="Nome e sobrenome">
-        <span class="f" style="display:block;font-size:14px;font-weight:600;margin:14px 0 0">Seu setor</span>
-        <div class="choose" style="margin-top:6px"><button type="button" class="fin" data-pick="fin" aria-pressed="${S.joinSector==='fin'}">Financeiro</button><button type="button" class="chat" data-pick="chat" aria-pressed="${S.joinSector==='chat'}">Chat Uniasselvi</button></div>
+        <span class="f" style="margin-top:14px">Seu setor</span>
+        <div class="choose" style="margin-top:6px"><button type="button" class="fin" data-pick="fin" aria-pressed="${S.joinSector === 'fin'}">Financeiro</button><button type="button" class="chat" data-pick="chat" aria-pressed="${S.joinSector === 'chat'}">Chat Uniasselvi</button></div>
         <label class="check"><input type="checkbox" id="jSup"> Faço parte da supervisão (o administrador precisa liberar)</label>
         <button class="btn" type="submit" style="margin-top:18px;width:100%">Entrar na loja</button>
       </form></div>`;
@@ -369,96 +486,26 @@ function build(){
   }
   const tabs = tabsFor();
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
-  $('#tabs').innerHTML = tabs.map(([k,l]) => `<button data-tab="${k}" aria-current="${S.tab===k}">${l}${k==='sup' && supCount() ? ` <span class="count">${supCount()}</span>` : ''}</button>`).join('');
-  const M = $('#main');
-  if (S.tab === 'loja') M.innerHTML = `<div id="hero"></div>
-    <div class="section-head"><h2>Prêmios</h2><span class="hint" id="storeHint"></span></div><div id="previewNav"></div><div class="grid" id="store"></div>`;
-  if (S.tab === 'tarefas') M.innerHTML = `<div class="section-head"><h2>Tarefas</h2><span class="hint">Conclua e ganhe Unicoins. A supervisão confere antes de creditar.</span></div>
+  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${l}<span id="badge-${k}"></span></button>`).join('');
+  const M = $('#main'), pre = previewBar();
+  if (S.tab === 'loja') { markSeen('items'); M.innerHTML = pre + `<div id="mural"></div><div id="hero"></div>
+    <div class="section-head"><h2>Prêmios</h2><span class="hint" id="storeHint"></span></div><div id="previewNav"></div><div class="grid" id="store"></div>`; }
+  if (S.tab === 'tarefas') { markSeen('tasks'); M.innerHTML = pre + `<div id="mural"></div><div class="section-head"><h2>Tarefas</h2><span class="hint">Conclua e ganhe Unicoins. A supervisão confere antes de creditar.</span></div>
     <div id="taskPrev"></div><div class="grid" id="tasks"></div>
-    ${p ? `<section class="panel" style="margin-top:24px"><h3>Minhas entregas</h3><ul class="list" id="mySubs"></ul></section>` : ''}`;
+    ${canAct() ? `<section class="panel" style="margin-top:24px"><h3>Minhas entregas</h3><ul class="list" id="mySubs"></ul></section>` : ''}`; }
   if (S.tab === 'meus') M.innerHTML = `<div class="cols"><section class="panel"><h3>Extrato</h3><ul class="list" id="myLedger"></ul></section>
     <section class="panel"><h3>Meus resgates</h3><ul class="list" id="myReds"></ul></section></div>`;
-  if (S.tab === 'ranking') M.innerHTML = `<div class="section-head"><h2>Quem mais ganhou Unicoins</h2><span class="hint">Soma de tudo que foi creditado, sem descontar as trocas.</span></div><div class="rank" id="rank"></div>`;
+  if (S.tab === 'ranking') M.innerHTML = pre + `<div class="section-head"><h2 id="rankTitle"></h2><span class="hint">Moedas ganhas na temporada, sem descontar as trocas.</span></div><div class="rank" id="rank"></div>
+    <div class="section-head" style="margin-top:30px"><h2>Temporadas anteriores</h2></div><div id="seasonsBox"></div>`;
   if (S.tab === 'sup') buildSup();
   fill();
 }
 
-function buildSup(){
-  const subs = [['tarefas','Tarefas'],['premios','Prêmios'],['moedas','Moedas'],['pedidos','Pedidos'],['acessos','Acessos']];
-  const M = $('#main');
-  let h = `<div class="subnav" id="subnav">${subs.map(([k,l]) => `<button data-sub="${k}" aria-current="${S.sub===k}">${l}${k==='pedidos'?'<span id="pc"></span>':''}${k==='tarefas'?'<span id="tc"></span>':''}${k==='acessos'?'<span id="ac"></span>':''}</button>`).join('')}</div>`;
-  if (S.sub === 'premios') h += `<div class="cols">
-    <form class="panel" id="itemForm" autocomplete="off"><h3 id="formTitle">Novo prêmio</h3>
-      <div class="row"><div style="flex:0 0 74px"><label class="f" for="fEmoji">Ícone</label><input class="in" id="fEmoji" maxlength="4" value="🎁"></div>
-      <div><label class="f" for="fName">Nome</label><input class="in" id="fName" maxlength="60" required placeholder="Ex.: Folga de 2 horas"></div></div>
-      <span class="f" style="display:block">Imagem</span>
-      <div class="imgpick"><div class="thumb" id="fThumb">Sem imagem</div><div class="row" style="gap:6px">
-        <input type="file" id="fImg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr"><label for="fImg" class="btn ghost sm" style="flex:none" tabindex="0" id="fImgBtn">Escolher imagem</label>
-        <button type="button" class="btn bad sm" id="fImgDel" style="flex:none" hidden>Remover</button></div></div>
-      <label class="f" for="fDesc">Descrição</label><textarea class="in" id="fDesc" rows="2" maxlength="160" placeholder="Como e quando o prêmio é entregue"></textarea>
-      <div class="row"><div><label class="f" for="fCost">Custo em Unicoins</label><input class="in" id="fCost" type="number" min="1" step="1" required></div>
-      <div><label class="f" for="fStock">Estoque</label><input class="in" id="fStock" type="number" min="0" step="1" placeholder="Sem limite"></div></div>
-      <label class="f" for="fSector">Disponível para</label><select class="in" id="fSector"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
-      <label class="check"><input type="checkbox" id="fActive" checked> Visível na loja</label>
-      <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="fSave">Adicionar à loja</button><button class="btn ghost" type="button" id="fCancel" hidden>Cancelar edição</button></div>
-    </form>
-    <section class="panel"><h3>Itens da loja</h3><ul class="list" id="itemList"></ul></section></div>`;
-  if (S.sub === 'moedas') h += `<div class="cols"><div>
-    <form class="panel" id="coinForm"><h3>Ajustar um colaborador</h3>
-      <label class="f" for="cTarget">Colaborador</label><select class="in" id="cTarget" required></select>
-      <div class="row"><div><label class="f" for="cAmt">Unicoins</label><input class="in" id="cAmt" type="number" min="1" step="1" required></div></div>
-      <label class="f" for="cWhy">Motivo</label><input class="in" id="cWhy" maxlength="80" required placeholder="Ex.: Meta de NPS batida">
-      <div class="row" style="margin-top:16px"><button class="btn" type="submit" data-dir="1">Creditar</button><button class="btn ghost" type="submit" data-dir="-1">Debitar</button></div>
-    </form>
-    <form class="panel" id="bulkForm" style="margin-top:18px"><h3>Creditar um setor inteiro</h3>
-      <label class="f" for="bSector">Setor</label><select class="in" id="bSector"><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
-      <label class="f" for="bAmt">Unicoins por pessoa</label><input class="in" id="bAmt" type="number" min="1" step="1" required>
-      <label class="f" for="bWhy">Motivo</label><input class="in" id="bWhy" maxlength="80" required placeholder="Ex.: Campanha do mês">
-      <button class="btn warn" type="submit" style="margin-top:16px">Creditar setor</button>
-    </form>
-    ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Zerar moedas e ranking</h3>
-      <p class="hint" style="margin-top:-4px;font-size:14px">Zera o saldo e os pontos do ranking. Use para começar uma nova temporada. Não tem como desfazer, mas tudo fica registrado no extrato.</p>
-      <div class="row"><button class="btn bad" data-reset="fin">Zerar Financeiro</button><button class="btn bad" data-reset="chat">Zerar Chat</button><button class="btn bad" data-reset="all">Zerar todos</button></div></section>` : ''}</div>
-    <section class="panel"><h3>Colaboradores</h3><ul class="list" id="playerList"></ul><h3 style="margin-top:22px">Movimentações recentes</h3><ul class="list" id="ledgerList"></ul></section></div>`;
-  if (S.sub === 'tarefas') h += `<div class="cols">
-    <form class="panel" id="taskForm" autocomplete="off"><h3 id="tFormTitle">Nova tarefa</h3>
-      <label class="f" for="tTitle">Tarefa</label><input class="in" id="tTitle" maxlength="80" required placeholder="Ex.: Zerar fila de e-mails pendentes">
-      <label class="f" for="tDesc">Como fazer / o que conta</label><textarea class="in" id="tDesc" rows="3" maxlength="300" placeholder="Critérios para a tarefa ser aprovada"></textarea>
-      <div class="row"><div><label class="f" for="tReward">Recompensa (Unicoins)</label><input class="in" id="tReward" type="number" min="1" step="1" required></div>
-      </div>
-      <span class="f" style="display:block">Para quem</span>
-      <div class="subnav" style="margin-bottom:8px"><button type="button" data-tmode="setor" aria-current="${S.tMode!=='pessoas'}">Setor inteiro</button><button type="button" data-tmode="pessoas" aria-current="${S.tMode==='pessoas'}">Colaboradores específicos</button></div>
-      <div id="tModeSetor" ${S.tMode==='pessoas'?'hidden':''}><select class="in" id="tSector" aria-label="Setor"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select></div>
-      <div id="tModePessoas" ${S.tMode==='pessoas'?'':'hidden'}><input class="in" id="tFind" placeholder="Filtrar por nome" value="${esc(S.tFind||'')}">
-        <ul class="list" id="tPeople" style="max-height:240px;overflow:auto;margin-top:6px"></ul><p class="hint" id="tSelCount" style="margin:4px 0 0;font-size:13px"></p></div>
-      <label class="check"><input type="checkbox" id="tProof"> Exigir comprovação (imagem ou texto)</label>
-      <label class="check"><input type="checkbox" id="tRepeat"> Pode ser feita mais de uma vez</label>
-      <label class="check"><input type="checkbox" id="tActive" checked> Visível para os colaboradores</label>
-      <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="tSave">Publicar tarefa</button><button class="btn ghost" type="button" id="tCancel" hidden>Cancelar edição</button></div>
-    </form>
-    <section class="panel"><h3>Tarefas cadastradas</h3><ul class="list" id="taskList"></ul></section></div>
-    <div class="cols" style="margin-top:18px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
-      <section class="panel"><h3>Entregas para conferir</h3><div id="subPend"></div></section>
-      <section class="panel"><h3>Histórico de entregas</h3><div id="subDone"></div></section></div>`;
-  if (S.sub === 'pedidos') h += `<div class="cols"><section class="panel"><h3>Aguardando entrega</h3><ul class="list" id="pendList"></ul></section>
-    <section class="panel"><h3>Histórico</h3><ul class="list" id="doneList"></ul></section></div>`;
-  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os 2 acessos de supervisão</h3>
-      <p class="hint" style="margin-top:-4px">Os dois têm as mesmas permissões que você na Supervisão (prêmios, tarefas, moedas e pedidos), menos esta tela de acessos. Os demais colaboradores só fazem tarefas e trocam prêmios.${S.owner?'':' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
-    ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
-      <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
-  M.innerHTML = h;
-}
-
-/* ---------- Fill (data-driven parts) ---------- */
-function subPending(){ return S.subs.filter(x => x.status === 'pendente').length; }
-function supCount(){ return pendingCount() + subPending(); }
-function pendingCount(){ return S.reds.filter(r => r.status === 'pendente').length; }
-function itemsFor(sector){ return S.items.filter(i => i.active !== false && (i.sector === 'ambos' || i.sector === sector)).sort((a,b)=>a.cost-b.cost); }
-
 function fill(){
-  if (!isSup() && !me()) return;
-  const tb = document.querySelector('[data-tab="sup"]');
-  if (tb) tb.innerHTML = 'Supervisão' + (supCount() ? ` <span class="count">${supCount()}</span>` : '');
+  if (isBlocked() || (!isSup() && !me())) return;
+  renderHeader(); tabBadges();
+  const mural = $('#mural');
+  if (mural) mural.innerHTML = S.notice && S.notice.text ? `<div class="mural"><b>📌 Recado da supervisão</b><p>${esc(S.notice.text)}</p></div>` : '';
   if (S.tab === 'loja') fillStore();
   if (S.tab === 'tarefas') keepFocus(fillTasks);
   if (S.tab === 'meus') fillMine();
@@ -471,262 +518,429 @@ function keepFocus(fn){
   if (id && document.activeElement !== a) { const n = document.getElementById(id); if (n) { n.focus(); try { if (st != null) n.setSelectionRange(st, en); } catch(e){} } }
 }
 
+/* ---------- Loja ---------- */
 function fillStore(){
-  const p = me(), sup = isSup();
-  const sector = p && !sup ? p.sector : (p && sup && S.previewSet !== true ? p.sector : S.preview);
-  if (p) {
-    $('#hero').innerHTML = `<div class="hero"><span class="coin big ${S.spun?'':'spin'}" aria-hidden="true">U</span><div>
-      <div class="amount">${fmt(bal(S.me))}</div><div class="label">Unicoins para trocar · <span class="sector-tag ${p.sector}">${SECT[p.sector].name}</span></div></div></div>`;
-    S.spun = true;
-  } else $('#hero').innerHTML = '';
-  if (sup) $('#previewNav').innerHTML = `<div class="subnav">${['fin','chat'].map(k=>`<button data-prev="${k}" aria-current="${sector===k}">Loja ${SECT[k].name}</button>`).join('')}</div>`;
-  const list = itemsFor(sector);
-  $('#storeHint').textContent = sup && !p ? 'Visão da supervisão. Os colaboradores veem o mesmo, em tempo real.' : `${list.length} ${list.length===1?'prêmio disponível':'prêmios disponíveis'}`;
-  if (!list.length) { $('#store').innerHTML = `<p class="empty" style="grid-column:1/-1">${sup ? 'Nenhum prêmio para este setor. Adicione itens em Supervisão › Prêmios.' : 'A loja ainda está vazia. Os prêmios aparecem aqui assim que a supervisão cadastrar.'}</p>`; return; }
-  $('#store').innerHTML = list.map(i => {
-    const av = avail(i), out = av !== null && av <= 0;
-    const canBuy = p && p.sector === sector;
-    const short = canBuy ? i.cost - bal(S.me) : 0;
+  const p = me(), sup = isSup(), sector = viewSector();
+  const act = canAct() && p.sector === sector;
+  $('#hero').innerHTML = p && !S.viewAs ? `<div class="hero"><span class="coin big ${S.spun ? '' : 'spin'}" aria-hidden="true">U</span><div>
+    <div class="amount">${fmt(bal(S.me))}</div><div class="label">Unicoins para trocar · <span class="sector-tag ${p.sector}">${SECT[p.sector].name}</span> · ${esc(seasonLabel())}</div></div></div>` : '';
+  if (p && !S.viewAs) S.spun = true;
+  $('#previewNav').innerHTML = sup && !S.viewAs ? `<div class="subnav">${['fin', 'chat'].map(k => `<button data-prev="${k}" aria-current="${sector === k}">Loja ${SECT[k].name}</button>`).join('')}</div>` : '';
+  const items = S.items.filter(i => i.active !== false && (i.sector === 'ambos' || i.sector === sector)).sort((a, b) => a.cost - b.cost);
+  $('#storeHint').textContent = `${items.length} ${items.length === 1 ? 'prêmio' : 'prêmios'} · cada prêmio pode ser resgatado 1 vez por pessoa na temporada`;
+  if (!items.length) { $('#store').innerHTML = `<p class="empty" style="grid-column:1/-1">${sup && !S.viewAs ? 'Nenhum prêmio para este setor. Adicione em Supervisão › Prêmios.' : 'A loja ainda está vazia. Os prêmios aparecem aqui assim que a supervisão cadastrar.'}</p>`; return; }
+  $('#store').innerHTML = items.map(i => {
+    const out = i.stock !== null && i.stock !== undefined && i.stock <= 0;
+    const done = act && hasRedeemed(i.id);
+    const short = act ? i.cost - bal(S.me) : 0;
     let btn = '';
-    if (canBuy) {
-      if (out) btn = `<button class="btn" disabled>Esgotado</button>`;
+    if (S.viewAs) btn = `<button class="btn" disabled>${out ? 'Esgotado' : 'Trocar'}</button>`;
+    else if (act) {
+      if (done) btn = `<button class="btn" disabled>Já resgatado</button>`;
+      else if (out) btn = `<button class="btn" disabled>Esgotado</button>`;
       else if (short > 0) btn = `<button class="btn" disabled>Faltam ${fmt(short)}</button>`;
       else if (S.confirmId === i.id) btn = `<button class="btn warn" data-buy="${i.id}" data-confirm="1">Confirmar troca</button>`;
       else btn = `<button class="btn" data-buy="${i.id}">Trocar</button>`;
     } else if (out) btn = `<span class="hint">Esgotado</span>`;
-    const stock = av === null ? 'Estoque livre' : out ? 'Sem estoque' : `${fmt(av)} restantes`;
+    const stock = i.stock === null || i.stock === undefined ? 'Estoque livre' : out ? 'Sem estoque' : `${fmt(i.stock)} restantes`;
     const img = safeImg(i.image);
-    return `<article class="ticket ${out?'off':''}">${img?`<div class="pic"><img src="${img}" alt=""></div>`:''}<div class="body">${img?'':`<div class="emoji" aria-hidden="true">${esc(i.emoji||'🎁')}</div>`}
-      <h3>${esc(i.name)}</h3>${i.desc?`<p>${esc(i.desc)}</p>`:''}
-      <div class="meta"><span class="sector-tag ${i.sector}">${SECT[i.sector]?.name||''}</span><span class="sector-tag ambos">${stock}</span></div></div>
+    return `<article class="ticket ${out || done ? 'off' : ''}">${img ? `<div class="pic"><img src="${img}" alt=""></div>` : ''}<div class="body">${img ? '' : `<div class="emoji" aria-hidden="true">${esc(i.emoji || '🎁')}</div>`}
+      <h3>${esc(i.name)}</h3>${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
+      <div class="meta">${S.newItems.has(i.id) ? '<span class="sector-tag new">Nova</span>' : ''}<span class="sector-tag ${i.sector}">${(SECT[i.sector] || {}).name || ''}</span><span class="sector-tag ambos">${stock}</span></div></div>
       <div class="stub"><span class="price">${coin}${fmt(i.cost)}</span>${btn}</div></article>`;
   }).join('');
 }
 
-function ledgerLi(l, showWho){
-  const pos = l.amount >= 0;
-  return `<li><div class="grow"><div class="t">${esc(l.reason||'')}</div><div class="s">${showWho?esc(nm(l.player))+' · ':''}${when(l.at)}</div></div>
-    <span class="${pos?'plus':'minus'}">${pos?'+':''}${fmt(l.amount)}</span></li>`;
-}
-function redLi(r, sup){
-  const lab = {pendente:'Aguardando',entregue:'Entregue',recusada:'Recusada · estornado'}[r.status]||r.status;
-  return `<li><span style="font-size:24px" aria-hidden="true">${esc(r.emoji||'🎁')}</span><div class="grow"><div class="t">${esc(r.itemName)}</div>
-    <div class="s">${sup?esc(nm(r.player))+' · '+(SECT[r.sector]?.name||'')+' · ':''}${fmt(r.cost)} Unicoins · ${when(r.at)}</div></div>
-    ${sup && r.status==='pendente' ? `<button class="btn ok sm" data-deliver="${r.id}">Entregar</button><button class="btn bad sm" data-refuse="${r.id}">Recusar</button>` : `<span class="status ${r.status}">${lab}</span>`}</li>`;
-}
-function fillMine(){
-  const L = S.ledger.filter(l => l.player === S.me), R = S.reds.filter(r => r.player === S.me);
-  $('#myLedger').innerHTML = L.length ? L.map(l=>ledgerLi(l,false)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
-  $('#myReds').innerHTML = R.length ? R.map(r=>redLi(r,false)).join('') : '<li class="empty">Você ainda não trocou nenhum prêmio.</li>';
-}
-function fillRank(){
-  const secs = isSup() ? ['fin','chat'] : [me().sector];
-  $('#rank').innerHTML = secs.map(k => {
-    const ps = Object.values(S.players).filter(p=>p.sector===k && earned(p.id) > 0).sort((a,b)=>earned(b.id)-earned(a.id)).slice(0,10);
-    return `<section class="panel"><h3><span class="sector-tag ${k}">${SECT[k].name}</span></h3><ul class="list">${ps.length ? ps.map((p,i)=>`<li><span class="pos ${i===0?'p1':''}">${i+1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém pontuou ainda neste setor.</li>'}</ul></section>`;
-  }).join('');
-}
-function fillSup(){
-  const pc = $('#pc'); if (pc) pc.innerHTML = pendingCount() ? `<span class="count">${pendingCount()}</span>` : '';
-  const ac = $('#ac'); if (ac) { const n = S.owner ? Object.values(S.players).filter(p=>p.supRequest && !(S.cfg.supervisors||[]).includes(p.id)).length : 0; ac.innerHTML = n ? ` <span class="count">${n}</span>` : ''; }
-  const tc = $('#tc'); if (tc) tc.innerHTML = subPending() ? `<span class="count">${subPending()}</span>` : '';
-  if (S.sub === 'tarefas') fillSupTasks();
-  if (S.sub === 'premios') {
-    const items = [...S.items].sort((a,b)=>(a.sector+a.cost).localeCompare(b.sector+b.cost, undefined, {numeric:true}));
-    $('#itemList').innerHTML = items.length ? items.map(i => `<li>${safeImg(i.image)?`<img class="mini" src="${safeImg(i.image)}" alt="">`:`<span style="font-size:24px" aria-hidden="true">${esc(i.emoji||'🎁')}</span>`}
-      <div class="grow"><div class="t">${esc(i.name)}${i.active===false?' <span class="hint">(oculto)</span>':''}</div>
-      <div class="s">${fmt(i.cost)} Unicoins · ${SECT[i.sector]?.name} · ${avail(i)===null?'estoque livre':fmt(avail(i))+' em estoque'}</div></div>
-      <button class="btn ghost sm" data-edit="${i.id}">Editar</button><button class="btn ghost sm" data-toggle="${i.id}">${i.active===false?'Mostrar':'Ocultar'}</button>
-      <button class="btn bad sm" data-del="${i.id}" ${S.confirmDel===i.id?'data-confirm="1"':''}>${S.confirmDel===i.id?'Confirmar':'Excluir'}</button></li>`).join('')
-      : '<li class="empty">Nenhum prêmio cadastrado. Use o formulário para criar o primeiro.</li>';
-  }
-  if (S.sub === 'moedas') {
-    const sel = $('#cTarget'), keep = sel.value;
-    const ps = Object.values(S.players).sort((a,b)=>nm(a.id).localeCompare(nm(b.id)));
-    sel.innerHTML = '<option value="">Selecione…</option>' + ['fin','chat'].map(k => `<optgroup label="${SECT[k].name}">${ps.filter(p=>p.sector===k).map(p=>`<option value="${p.id}">${esc(nm(p.id))} — ${fmt(bal(p.id))}</option>`).join('')}</optgroup>`).join('');
-    sel.value = keep;
-    $('#playerList').innerHTML = ps.length ? ps.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · ganhou ${fmt(earned(p.id))} no total</div></div>
-      <select class="in" style="width:auto;flex:none" data-move="${p.id}" aria-label="Setor de ${esc(nm(p.id))}"><option value="fin" ${p.sector==='fin'?'selected':''}>Financeiro</option><option value="chat" ${p.sector==='chat'?'selected':''}>Chat</option></select>
-      <span class="price" style="font-size:18px">${coin}${fmt(bal(p.id))}</span>${S.owner ? `<button class="btn bad sm" style="flex:none" data-rp="${p.id}" ${S.confirmRp===p.id?'data-confirm="1"':''}>${S.confirmRp===p.id?'Confirmar':'Zerar'}</button>` : ''}</li>`).join('') : '<li class="empty">Quando os colaboradores abrirem o link e escolherem o setor, eles aparecem aqui.</li>';
-    const L = S.ledger.slice(0,40);
-    $('#ledgerList').innerHTML = L.length ? L.map(l=>ledgerLi(l,true)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
-  }
-  if (S.sub === 'pedidos') {
-    const P = S.reds.filter(r=>r.status==='pendente').slice().reverse(), D = S.reds.filter(r=>r.status!=='pendente').slice(0,60);
-    $('#pendList').innerHTML = P.length ? P.map(r=>redLi(r,true)).join('') : '<li class="empty">Nenhum pedido aguardando.</li>';
-    $('#doneList').innerHTML = D.length ? D.map(r=>redLi(r,true)).join('') : '<li class="empty">Os pedidos entregues ou recusados ficam aqui.</li>';
-  }
-  if (S.sub === 'acessos') {
-    $('#slots').innerHTML = [0,1].map(i => { const id = S.cfg.supervisors[i];
-      return `<div class="slot"><span class="pos ${id?'p1':''}">${i+1}</span><div class="grow">${id?`<b>${esc(nm(id))}</b>`:'<span class="hint">Acesso livre</span>'}</div>
-      ${id && S.owner ? `<button class="btn bad sm" data-unslot="${i}">Remover</button>` : ''}</div>`; }).join('');
-    if (!S.owner) return;
-    const sups = S.cfg.supervisors||[];
-    const all = Object.values(S.players).sort((a,b)=>nm(a.id).localeCompare(nm(b.id)));
-    const reqs = all.filter(p=>p.supRequest && !sups.includes(p.id));
-    $('#reqList').innerHTML = reqs.length ? reqs.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · pediu acesso de supervisão</div></div>
-      <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
-    const others = all.filter(p=>!sups.includes(p.id));
-    $('#peopleList').innerHTML = others.length ? others.map(p=>`<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[0,1].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar na loja aparece aqui.</li>';
-  }
-}
-function fillHits(){
-  const box = $('#sHits'); if (!box) return;
-  box.innerHTML = S.searchHits.length ? S.searchHits.map(h => `<li><div class="grow t">${esc(h.name)}</div>${[0,1].map(i=>`<button class="btn ghost sm" data-slot="${i}" data-pid="${h.id}">Acesso ${i+1}</button>`).join('')}</li>`).join('') : '<li class="empty">Nenhuma pessoa encontrada.</li>';
-}
-
-/* ---------- Tarefas ---------- */
-const audOf = t => Array.isArray(t.audience) ? t.audience : (t.sector === 'ambos' ? ['sec:fin','sec:chat'] : ['sec:' + t.sector]);
-const isIndividual = t => audOf(t).some(a => a.startsWith('uid:'));
-function visibleFor(t, sector){
-  const a = audOf(t);
-  if (a.includes('sec:' + sector)) return true;
-  const p = me();
-  if (p && p.sector === sector && a.includes('uid:' + S.me)) return true;
-  return isSup() && a.some(x => x.startsWith('uid:') && S.players[x.slice(4)] && S.players[x.slice(4)].sector === sector);
-}
-function audLabel(t){
-  const a = audOf(t);
-  if (!isIndividual(t)) return a.length > 1 ? 'Ambos os setores' : SECT[a[0].slice(4)]?.name || '';
-  const names = a.filter(x => x.startsWith('uid:')).map(x => nm(x.slice(4)));
-  return names.length > 3 ? names.slice(0,3).join(', ') + ' e mais ' + (names.length - 3) : names.join(', ');
-}
-function tasksFor(sector){ return S.tasks.filter(t => t.active !== false && visibleFor(t, sector)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); }
-function fillPeoplePick(){
-  const box = $('#tPeople'); if (!box) return;
-  const sups = S.cfg.supervisors || [];
-  const q = (S.tFind || '').toLowerCase();
-  const ps = Object.values(S.players).filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id) && nm(p.id).toLowerCase().includes(q)).sort((a,b)=>nm(a.id).localeCompare(nm(b.id)));
-  box.innerHTML = ps.length ? ['fin','chat'].map(k => { const g = ps.filter(p => p.sector === k); return g.length ? `<li style="border:0;padding:8px 2px 2px"><span class="sector-tag ${k}">${SECT[k].name}</span></li>` + g.map(p => `<li style="padding:6px 2px"><label class="check" style="margin:0;flex:1;cursor:pointer"><input type="checkbox" data-tsel="${p.id}" ${S.tSel.has(p.id)?'checked':''}> ${esc(nm(p.id))}</label></li>`).join('') : ''; }).join('')
-    : '<li class="empty">Nenhum colaborador encontrado.</li>';
-  const n = S.tSel.size; $('#tSelCount').textContent = n ? `${n} ${n===1?'pessoa selecionada':'pessoas selecionadas'}` : 'Marque quem deve receber a tarefa.';
-}
-const SUBLAB = { pendente:'Em análise', aprovada:'Aprovada', recusada:'Recusada' };
+/* ---------- Tarefas (visão do colaborador) ---------- */
 function fillTasks(){
-  const p = me(), sup = isSup();
-  const sector = p && !(sup && S.previewSet) ? p.sector : S.preview;
-  if (sup) $('#taskPrev').innerHTML = `<div class="subnav">${['fin','chat'].map(k=>`<button data-prev="${k}" aria-current="${sector===k}">Tarefas ${SECT[k].name}</button>`).join('')}</div>`;
-  const list = tasksFor(sector);
+  const p = me(), sup = isSup(), sector = viewSector();
+  const act = canAct() && p.sector === sector;
+  $('#taskPrev').innerHTML = sup && !S.viewAs ? `<div class="subnav">${['fin', 'chat'].map(k => `<button data-prev="${k}" aria-current="${sector === k}">Tarefas ${SECT[k].name}</button>`).join('')}</div>` : '';
+  const mineOf = t => S.subs.filter(x => x.task === t.id && x.player === S.me);
+  let list = S.tasks.filter(t => t.active !== false && visibleFor(t, sector));
+  if (!sup || S.viewAs) list = list.filter(t => !isExpired(t) || (act && mineOf(t).some(x => x.status !== 'recusada')));
+  list.sort((a, b) => (isExpired(a) - isExpired(b)) || ((a.deadlineAt || 9e15) - (b.deadlineAt || 9e15)) || ((b.createdAt || 0) - (a.createdAt || 0)));
   const box = $('#tasks');
-  if (!list.length) box.innerHTML = `<p class="empty" style="grid-column:1/-1">${sup ? 'Nenhuma tarefa para este setor. Crie em Supervisão › Tarefas.' : 'Nenhuma tarefa aberta agora. Novas tarefas aparecem aqui assim que a supervisão publicar.'}</p>`;
+  if (!list.length) box.innerHTML = `<p class="empty" style="grid-column:1/-1">${sup && !S.viewAs ? 'Nenhuma tarefa para este setor. Crie em Supervisão › Tarefas.' : 'Nenhuma tarefa aberta agora. Novas tarefas aparecem aqui assim que a supervisão publicar.'}</p>`;
   else box.innerHTML = list.map(t => {
-    const mine = p ? S.subs.filter(x => x.task === t.id && x.player === S.me) : [];
+    const mine = act ? mineOf(t) : [];
     const pend = mine.some(x => x.status === 'pendente'), done = mine.some(x => x.status === 'aprovada');
-    const canDo = p && p.sector === sector;
+    const exp = isExpired(t);
     let action = '';
-    if (canDo) {
+    if (S.viewAs) action = `<button class="btn" disabled>${t.proof ? 'Enviar comprovação' : 'Marcar como feita'}</button>`;
+    else if (act) {
       if (pend) action = `<span class="status pendente">Em análise</span>`;
       else if (done && !t.repeat) action = `<span class="status aprovada">Concluída</span>`;
+      else if (exp) action = `<span class="status recusada">Prazo encerrado</span>`;
       else if (S.openTask !== t.id) action = `<button class="btn" data-open="${t.id}">${t.proof ? 'Enviar comprovação' : 'Marcar como feita'}</button>`;
-    }
-    const form = canDo && S.openTask === t.id ? `<form class="tform" id="subForm" data-task="${t.id}">
+    } else if (sup) { const aud = audiencePlayers(t), ok = new Set(S.subs.filter(x => x.task === t.id && x.status === 'aprovada').map(x => x.player)); action = `<span class="hint">${aud.filter(p => ok.has(p.id)).length}/${aud.length} concluíram</span>`; }
+    const form = act && S.openTask === t.id && !exp ? `<form class="tform" id="subForm" data-task="${t.id}">
         <label class="f" for="sNote" style="margin-top:0">${t.proof ? 'Comprovação: link ou descrição' : 'Observação (opcional)'}</label>
         <textarea class="in" id="sNote" rows="2" maxlength="500">${esc(S.draft.note)}</textarea>
-        ${t.proof ? `<span class="f" style="display:block">Imagem (print, foto)</span><div class="imgpick"><div class="thumb">${safeImg(S.draft.image)?`<img src="${S.draft.image}" alt="Comprovação">`:'Sem imagem'}</div>
+        ${t.proof ? `<span class="f">Imagem (print, foto)</span><div class="imgpick"><div class="thumb">${safeImg(S.draft.image) ? `<img src="${S.draft.image}" alt="Comprovação">` : 'Sem imagem'}</div>
           <div class="row" style="gap:6px"><input type="file" id="sImg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr"><label for="sImg" class="btn ghost sm" style="flex:none" tabindex="0" id="sImgBtn">Anexar imagem</label>
-          ${S.draft.image?'<button type="button" class="btn bad sm" style="flex:none" id="sImgDel">Remover</button>':''}</div></div>` : ''}
+          ${S.draft.image ? '<button type="button" class="btn bad sm" style="flex:none" id="sImgDel">Remover</button>' : ''}</div></div>` : ''}
         <div class="row" style="margin-top:12px"><button class="btn" type="submit">Enviar para a supervisão</button><button class="btn ghost" type="button" id="sCancel">Cancelar</button></div></form>` : '';
-    return `<article class="ticket"><div class="body"><div class="meta" style="margin-top:0">${isIndividual(t)?'':`<span class="sector-tag ${t.sector}">${SECT[t.sector]?.name||''}</span>`}
-      ${isIndividual(t)?'<span class="sector-tag ambos">Individual</span>':''}${t.proof?'<span class="sector-tag ambos">Exige comprovação</span>':''}${t.repeat?'<span class="sector-tag ambos">Repetível</span>':''}</div>
-      <h3>${esc(t.title)}</h3>${t.desc?`<p style="white-space:pre-wrap">${esc(t.desc)}</p>`:''}${form}</div>
+    const dl = t.deadlineAt ? `<span class="sector-tag ${exp ? 'late' : 'ambos'}">${exp ? 'Encerrada em ' : 'Até '}${dateBR(t.deadlineAt)}</span>` : '';
+    return `<article class="ticket ${exp ? 'off' : ''}"><div class="body"><div class="meta" style="margin-top:0">
+      ${S.newTasks.has(t.id) ? '<span class="sector-tag new">Nova</span>' : ''}${isIndividual(t) ? '<span class="sector-tag ambos">Individual</span>' : `<span class="sector-tag ${t.sector}">${(SECT[t.sector] || {}).name || ''}</span>`}
+      ${dl}${t.proof ? '<span class="sector-tag ambos">Exige comprovação</span>' : ''}${t.repeat ? '<span class="sector-tag ambos">Repetível</span>' : ''}</div>
+      <h3>${esc(t.title)}</h3>${t.desc ? `<p style="white-space:pre-wrap">${esc(t.desc)}</p>` : ''}${sup && !S.viewAs && isIndividual(t) ? `<p class="hint" style="font-size:13px;margin-top:6px">Para: ${esc(audLabel(t))}</p>` : ''}${form}</div>
       <div class="stub"><span class="reward">+${fmt(t.reward)} ${coin}</span>${action}</div></article>`;
   }).join('');
   const ms = $('#mySubs');
   if (ms) { const L = S.subs.filter(x => x.player === S.me);
-    ms.innerHTML = L.length ? L.map(x => `<li><div class="grow"><div class="t">${esc(x.taskTitle)}</div><div class="s">${when(x.at)}${x.status==='recusada'&&x.reason?' · Motivo: '+esc(x.reason):''}</div></div>
-      <span class="reward" style="font-size:16px;${x.status==='aprovada'?'':'color:var(--muted)'}">+${fmt(x.reward)}</span><span class="status ${x.status}">${SUBLAB[x.status]}</span></li>`).join('') : '<li class="empty">Você ainda não enviou nenhuma tarefa.</li>'; }
+    ms.innerHTML = L.length ? L.map(x => `<li><div class="grow"><div class="t">${esc(x.taskTitle)}</div><div class="s">${when(x.at)}${x.status === 'recusada' && x.reason ? ' · Motivo: ' + esc(x.reason) : ''}</div></div>
+      <span class="reward" style="font-size:16px;${x.status === 'aprovada' ? '' : 'color:var(--muted)'}">+${fmt(x.reward)}</span><span class="status ${x.status}">${SUB_LAB[x.status]}</span></li>`).join('') : '<li class="empty">Você ainda não enviou nenhuma tarefa.</li>'; }
+}
+
+/* ---------- Meus resgates ---------- */
+function ledgerLi(l, showWho){
+  const pos = l.amount >= 0;
+  return `<li><div class="grow"><div class="t">${esc(l.reason || '')}</div><div class="s">${showWho ? esc(nm(l.player)) + ' · ' : ''}${when(l.at)}</div></div>
+    <span class="${pos ? 'plus' : 'minus'}">${pos ? '+' : ''}${fmt(l.amount)}</span></li>`;
+}
+function fillMine(){
+  const L = S.ledger.filter(l => l.player === S.me), R = S.reds.filter(r => r.player === S.me);
+  $('#myLedger').innerHTML = L.length ? L.map(l => ledgerLi(l, false)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
+  $('#myReds').innerHTML = R.length ? R.map(r => `<li><span style="font-size:24px" aria-hidden="true">${esc(r.emoji || '🎁')}</span><div class="grow"><div class="t">${esc(r.itemName)}</div>
+    <div class="s">${fmt(r.cost)} Unicoins · ${when(r.at)}${r.obs ? ' · ' + esc(r.obs) : ''}</div></div><span class="status ${r.status}">${RED_LAB[r.status] || r.status}</span></li>`).join('') : '<li class="empty">Você ainda não trocou nenhum prêmio.</li>';
+}
+
+/* ---------- Ranking ---------- */
+function fillRank(){
+  const secs = isSup() && !S.viewAs ? ['fin', 'chat'] : [viewSector()];
+  $('#rankTitle').textContent = 'Ranking · ' + seasonLabel();
+  $('#rank').innerHTML = secs.map(k => {
+    const ps = Object.values(S.players).filter(p => p.sector === k && !p.blocked && earned(p.id) > 0).sort((a, b) => earned(b.id) - earned(a.id)).slice(0, 10);
+    return `<section class="panel"><h3><span class="sector-tag ${k}">${SECT[k].name}</span></h3><ul class="list">${ps.length ? ps.map((p, i) => `<li><span class="pos ${i === 0 ? 'p1' : ''}">${i + 1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém pontuou ainda neste setor.</li>'}</ul></section>`;
+  }).join('');
+  $('#seasonsBox').innerHTML = S.seasons.length ? `<div class="rank">${S.seasons.map(se => `<section class="panel"><h3>${esc(se.name)}</h3><p class="hint" style="margin:-6px 0 8px;font-size:13px">${dateBR(se.startedAt)} a ${dateBR(se.endedAt)}</p>
+    ${secs.map(k => { const top = ((se.ranking || {})[k] || []).slice(0, 3); return `<div style="margin-top:8px"><span class="sector-tag ${k}">${SECT[k].name}</span><div class="podium">${top.length ? top.map((r, i) => `<span>${['🥇', '🥈', '🥉'][i]} ${esc(r.name)} · ${fmt(r.earned)}</span>`).join('') : '<span>Sem pontuação</span>'}</div></div>`; }).join('')}</section>`).join('')}</div>`
+    : '<p class="empty">Quando a supervisão encerrar uma temporada, o pódio fica guardado aqui.</p>';
+}
+
+/* ---------- Supervisão ---------- */
+function subsFor(){
+  const s = [['tarefas', 'Tarefas'], ['premios', 'Prêmios'], ['moedas', 'Moedas'], ['pedidos', 'Pedidos'], ['painel', 'Painel'], ['mural', 'Mural']];
+  if (S.owner) s.push(['colab', 'Colaboradores']);
+  s.push(['acessos', 'Acessos']);
+  return s;
+}
+function buildSup(){
+  const subs = subsFor();
+  if (!subs.some(x => x[0] === S.sub)) S.sub = 'tarefas';
+  let h = `<div class="subnav" id="subnav">${subs.map(([k, l]) => `<button data-sub="${k}" aria-current="${S.sub === k}">${l}<span id="sc-${k}"></span></button>`).join('')}</div>`;
+  if (S.sub === 'tarefas') h += `<div class="cols">
+    <form class="panel" id="taskForm" autocomplete="off"><h3 id="tFormTitle">Nova tarefa</h3>
+      <label class="f" for="tTitle">Tarefa</label><input class="in" id="tTitle" maxlength="80" required placeholder="Ex.: Zerar fila de e-mails pendentes">
+      <label class="f" for="tDesc">Como fazer / o que conta</label><textarea class="in" id="tDesc" rows="3" maxlength="300" placeholder="Critérios para a tarefa ser aprovada"></textarea>
+      <div class="row"><div><label class="f" for="tReward">Recompensa (Unicoins)</label><input class="in" id="tReward" type="number" min="1" step="1" required></div>
+      <div><label class="f" for="tDeadline">Prazo (opcional)</label><input class="in" id="tDeadline" type="date"></div></div>
+      <span class="f">Para quem</span>
+      <div class="subnav" style="margin-bottom:8px"><button type="button" data-tmode="setor" aria-current="${S.tMode !== 'pessoas'}">Setor inteiro</button><button type="button" data-tmode="pessoas" aria-current="${S.tMode === 'pessoas'}">Colaboradores específicos</button></div>
+      <div id="tModeSetor" ${S.tMode === 'pessoas' ? 'hidden' : ''}><select class="in" id="tSector" aria-label="Setor"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
+        <p class="hint" style="font-size:13px;margin:6px 0 0">Cada pessoa do setor recebe a tarefa e faz a sua entrega individualmente.</p></div>
+      <div id="tModePessoas" ${S.tMode === 'pessoas' ? '' : 'hidden'}><input class="in" id="tFind" placeholder="Filtrar por nome" value="${esc(S.tFind)}">
+        <ul class="list" id="tPeople" style="max-height:240px;overflow:auto;margin-top:6px"></ul><p class="hint" id="tSelCount" style="margin:4px 0 0;font-size:13px"></p></div>
+      <label class="check"><input type="checkbox" id="tProof"> Exigir comprovação (imagem ou texto)</label>
+      <label class="check"><input type="checkbox" id="tRepeat"> Pode ser feita mais de uma vez</label>
+      <label class="check"><input type="checkbox" id="tActive" checked> Visível para os colaboradores</label>
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="tSave">Publicar tarefa</button><button class="btn ghost" type="button" id="tCancel" hidden>Cancelar edição</button></div>
+    </form>
+    <div><section class="panel"><h3>Tarefas cadastradas</h3><ul class="list" id="taskList"></ul></section>
+    <section class="panel" id="progressBox" style="margin-top:18px" hidden></section></div></div>
+    <div class="cols" style="margin-top:18px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+      <section class="panel"><h3>Entregas para conferir</h3><div id="subPend"></div></section>
+      <section class="panel"><h3>Histórico de entregas</h3><div id="subDone"></div></section></div>`;
+  if (S.sub === 'premios') h += `<div class="cols">
+    <form class="panel" id="itemForm" autocomplete="off"><h3 id="formTitle">Novo prêmio</h3>
+      <div class="row"><div style="flex:0 0 74px"><label class="f" for="fEmoji">Ícone</label><input class="in" id="fEmoji" maxlength="4" value="🎁"></div>
+      <div><label class="f" for="fName">Nome</label><input class="in" id="fName" maxlength="60" required placeholder="Ex.: Folga de 2 horas"></div></div>
+      <span class="f">Imagem</span>
+      <div class="imgpick"><div class="thumb" id="fThumb">Sem imagem</div><div class="row" style="gap:6px">
+        <input type="file" id="fImg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr"><label for="fImg" class="btn ghost sm" style="flex:none" tabindex="0" id="fImgBtn">Escolher imagem</label>
+        <button type="button" class="btn bad sm" id="fImgDel" style="flex:none" hidden>Remover</button></div></div>
+      <label class="f" for="fDesc">Descrição</label><textarea class="in" id="fDesc" rows="2" maxlength="160" placeholder="Como e quando o prêmio é entregue"></textarea>
+      <div class="row"><div><label class="f" for="fCost">Custo em Unicoins</label><input class="in" id="fCost" type="number" min="1" step="1" required></div>
+      <div><label class="f" for="fStock">Estoque</label><input class="in" id="fStock" type="number" min="0" step="1" placeholder="Sem limite"></div></div>
+      <label class="f" for="fSector">Disponível para</label><select class="in" id="fSector"><option value="ambos">Ambos os setores</option><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
+      <label class="check"><input type="checkbox" id="fActive" checked> Visível na loja</label>
+      <p class="hint" style="font-size:13px;margin:8px 0 0">Cada colaborador pode resgatar este prêmio 1 vez por temporada.</p>
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="fSave">Adicionar à loja</button><button class="btn ghost" type="button" id="fCancel" hidden>Cancelar edição</button></div>
+    </form>
+    <section class="panel"><h3>Itens da loja</h3><ul class="list" id="itemList"></ul></section></div>`;
+  if (S.sub === 'moedas') h += `<div class="cols"><div>
+    <form class="panel" id="coinForm"><h3>Ajustar um colaborador</h3>
+      <label class="f" for="cTarget">Colaborador</label><select class="in" id="cTarget" required></select>
+      <label class="f" for="cAmt">Unicoins</label><input class="in" id="cAmt" type="number" min="1" step="1" required>
+      <label class="f" for="cWhy">Motivo</label><input class="in" id="cWhy" maxlength="80" required placeholder="Ex.: Meta de NPS batida">
+      <div class="row" style="margin-top:16px"><button class="btn" type="submit" data-dir="1">Creditar</button><button class="btn ghost" type="submit" data-dir="-1">Debitar</button></div>
+    </form>
+    <form class="panel" id="bulkForm" style="margin-top:18px"><h3>Creditar um setor inteiro</h3>
+      <label class="f" for="bSector">Setor</label><select class="in" id="bSector"><option value="fin">Financeiro</option><option value="chat">Chat Uniasselvi</option></select>
+      <label class="f" for="bAmt">Unicoins por pessoa</label><input class="in" id="bAmt" type="number" min="1" step="1" required>
+      <label class="f" for="bWhy">Motivo</label><input class="in" id="bWhy" maxlength="80" required placeholder="Ex.: Campanha do mês">
+      <button class="btn warn" type="submit" style="margin-top:16px">Creditar setor</button>
+    </form>
+    ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Temporada</h3>
+      <p class="hint" style="margin-top:-4px;font-size:14px">Agora: <b>${esc(seasonLabel())}</b>${S.cfg.seasonStart ? ', desde ' + dateBR(S.cfg.seasonStart) : ''}. Ao encerrar, o pódio é guardado, as moedas e o ranking de todos são zerados e cada prêmio pode ser resgatado de novo.</p>
+      <label class="f" for="nextSeason">Nome da próxima temporada</label><input class="in" id="nextSeason" maxlength="40" placeholder="Ex.: Temporada Novembro">
+      <button class="btn bad" id="endSeason" style="margin-top:12px">Encerrar temporada</button>
+      <h3 style="margin-top:22px">Zerar só um setor</h3>
+      <div class="row"><button class="btn bad" data-reset="fin">Zerar Financeiro</button><button class="btn bad" data-reset="chat">Zerar Chat</button></div></section>` : ''}</div>
+    <section class="panel"><h3>Colaboradores</h3><ul class="list" id="playerList"></ul><h3 style="margin-top:22px">Movimentações recentes</h3><ul class="list" id="ledgerList"></ul></section></div>`;
+  if (S.sub === 'pedidos') h += `<div class="cols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><section class="panel"><h3>Pedidos em aberto</h3><div id="pendList"></div></section>
+    <section class="panel"><h3>Histórico</h3><ul class="list" id="doneList"></ul></section></div>`;
+  if (S.sub === 'painel') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Indicadores · ${esc(seasonLabel())}</h3><button class="btn ghost sm" id="kpiRefresh">Atualizar</button></div><div id="kpis"></div></section>
+    <section class="panel" style="margin-top:18px"><h3>Exportar para Excel</h3><p class="hint" style="margin-top:-4px;font-size:14px">Baixa uma planilha (.csv) que abre direto no Excel.</p>
+      <div class="row"><button class="btn ghost" data-export="extrato">Extrato de moedas</button><button class="btn ghost" data-export="trocas">Trocas de prêmios</button><button class="btn ghost" data-export="entregas">Entregas de tarefas</button><button class="btn ghost" data-export="colab">Colaboradores</button></div></section>
+    ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Registro de ações da supervisão</h3><ul class="list" id="auditList"></ul></section>` : ''}`;
+  if (S.sub === 'mural') h += `<section class="panel" style="max-width:640px"><h3>Recado para as equipes</h3>
+    <p class="hint" style="margin-top:-4px;font-size:14px">Aparece no topo da Loja e das Tarefas para todos os colaboradores.</p>
+    <textarea class="in" id="muralText" rows="4" maxlength="500" placeholder="Ex.: Campanha de outubro: tarefas de NPS valem o dobro até sexta!">${esc(S.muralDraft ?? (S.notice && S.notice.text) ?? '')}</textarea>
+    <div class="row" style="margin-top:12px"><button class="btn" id="muralSave">Publicar recado</button><button class="btn ghost" id="muralClear">Remover recado</button></div>
+    <p class="hint" id="muralInfo" style="font-size:13px"></p></section>`;
+  if (S.sub === 'colab') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Colaboradores cadastrados</h3><input class="in" id="pFind" placeholder="Buscar por nome ou e-mail" value="${esc(S.pFind)}" style="max-width:280px"></div>
+    <ul class="list" id="colabList"></ul>
+    <p class="hint" style="font-size:13px;margin-top:14px">Por segurança, o Firebase não permite ver ou definir a senha de outra pessoa pela página. "Redefinir senha" envia ao colaborador um e-mail para ele criar uma nova. Para apagar o login de vez, use o console do Firebase: Authentication › Usuários › menu ⋮ › Excluir conta.</p></section>`;
+  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os 2 acessos de supervisão</h3>
+      <p class="hint" style="margin-top:-4px">Os dois têm as mesmas permissões que o administrador na Supervisão, menos Colaboradores e Acessos. Os demais colaboradores só fazem tarefas e trocam prêmios.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
+    ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
+      <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
+  $('#main').innerHTML = h;
+  if (S.sub === 'painel') loadKpis();
+}
+
+function fillSup(){
+  const sc = (k, n) => { const el = document.getElementById('sc-' + k); if (el) el.innerHTML = n ? ` <span class="count">${n}</span>` : ''; };
+  sc('tarefas', S.subsPend.length); sc('pedidos', S.redsOpen.filter(r => r.status === 'pendente').length);
+  sc('acessos', S.owner ? Object.values(S.players).filter(p => p.supRequest && !p.blocked && !supIds().includes(p.id)).length : 0);
+  if (S.sub === 'tarefas') fillSupTasks();
+  if (S.sub === 'premios') fillSupItems();
+  if (S.sub === 'moedas') fillSupCoins();
+  if (S.sub === 'pedidos') fillSupOrders();
+  if (S.sub === 'painel') { renderKpis(); fillAudit(); }
+  if (S.sub === 'mural') { const i = $('#muralInfo'); if (i) i.textContent = S.notice && S.notice.text ? `Publicado por ${nm(S.notice.by)} em ${when(S.notice.at)}.` : 'Nenhum recado publicado.'; }
+  if (S.sub === 'colab') fillColab();
+  if (S.sub === 'acessos') fillAccess();
+}
+
+/* Tarefas */
+function fillPeoplePick(){
+  const box = $('#tPeople'); if (!box) return;
+  const sups = supIds(), q = S.tFind.toLowerCase();
+  const ps = Object.values(S.players).filter(p => !p.blocked && !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id) && nm(p.id).toLowerCase().includes(q)).sort((a, b) => nm(a.id).localeCompare(nm(b.id)));
+  box.innerHTML = ps.length ? ['fin', 'chat'].map(k => { const g = ps.filter(p => p.sector === k); return g.length ? `<li style="border:0;padding:8px 2px 2px"><span class="sector-tag ${k}">${SECT[k].name}</span></li>` + g.map(p => `<li style="padding:6px 2px"><label class="check" style="margin:0;flex:1;cursor:pointer"><input type="checkbox" data-tsel="${p.id}" ${S.tSel.has(p.id) ? 'checked' : ''}> ${esc(nm(p.id))}</label></li>`).join('') : ''; }).join('')
+    : '<li class="empty">Nenhum colaborador encontrado.</li>';
+  selCount();
+}
+function selCount(){ const el = $('#tSelCount'); if (!el) return; const n = S.tSel.size; el.textContent = n ? `${n} ${n === 1 ? 'pessoa selecionada' : 'pessoas selecionadas'}` : 'Marque quem deve receber a tarefa.'; }
+function proofOf(x){ return safeImg(x.image) || safeImg(S.proofs[x.id]); }
+function loadProofs(list){
+  list.filter(x => x.hasImage && !(x.id in S.proofs) && !S.proofLoading.has(x.id)).forEach(x => {
+    S.proofLoading.add(x.id);
+    getDoc(doc(fdb, 'proofs', x.id)).then(s => { S.proofs[x.id] = s.exists() ? s.data().image : null; S.proofLoading.delete(x.id); if (S.tab === 'sup' && S.sub === 'tarefas') keepFocus(fillSupTasks); }).catch(() => S.proofLoading.delete(x.id));
+  });
 }
 function subBlock(x, pending){
   const img = proofOf(x);
   return `<div class="subitem">${img ? `<button class="proof" data-zoom="${x.id}" aria-label="Ampliar comprovação"><img src="${img}" alt=""></button>` : x.hasImage ? '<span class="proof" style="display:grid;place-items:center;font-size:11px;color:var(--muted)">carregando</span>' : '<span class="pos" aria-hidden="true">✓</span>'}
     <div><div class="t" style="font-weight:600">${esc(nm(x.player))} · ${esc(x.taskTitle)}</div>
-    <div class="s hint" style="font-size:13px">${SECT[x.sector]?.name||''} · +${fmt(x.reward)} Unicoins · ${when(x.at)}</div>
+    <div class="s hint" style="font-size:13px">${(SECT[x.sector] || {}).name || ''} · +${fmt(x.reward)} Unicoins · ${when(x.at)}</div>
     ${x.note ? `<div class="note">${esc(x.note)}</div>` : ''}
-    ${pending ? `<div class="row" style="margin-top:10px"><input class="in" id="r_${x.id}" data-reason="${x.id}" placeholder="Motivo, se recusar" value="${esc(S.reasons[x.id]||'')}" style="flex:2 1 160px">
+    ${pending ? `<div class="row" style="margin-top:10px"><input class="in" id="r_${x.id}" data-reason="${x.id}" placeholder="Motivo, se recusar" value="${esc(S.reasons[x.id] || '')}" style="flex:2 1 160px">
       <button class="btn ok sm" style="flex:none" data-approve="${x.id}">Aprovar</button><button class="btn bad sm" style="flex:none" data-reject="${x.id}">Recusar</button></div>`
-      : `<div style="margin-top:6px"><span class="status ${x.status}">${SUBLAB[x.status]}</span>${x.reason?` <span class="hint" style="font-size:13px">${esc(x.reason)}</span>`:''}</div>`}</div></div>`;
-}
-function proofOf(x){ return safeImg(x.image) || safeImg(S.proofs[x.id]); }
-function loadProofs(list){
-  const need = list.filter(x => x.hasImage && !(x.id in S.proofs) && !S.proofLoading.has(x.id));
-  need.forEach(x => { S.proofLoading.add(x.id); S.db.doc('proofs/'+x.id).get().then(s => { S.proofs[x.id] = s.exists ? s.data().image : null; S.proofLoading.delete(x.id); if (S.tab==='sup' && S.sub==='tarefas') keepFocus(fillSupTasks); }).catch(() => S.proofLoading.delete(x.id)); });
+      : `<div style="margin-top:6px"><span class="status ${x.status}">${SUB_LAB[x.status]}</span>${x.reason ? ` <span class="hint" style="font-size:13px">${esc(x.reason)}</span>` : ''}</div>`}</div></div>`;
 }
 function fillSupTasks(){
   fillPeoplePick();
-  const ts = [...S.tasks].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  $('#taskList').innerHTML = ts.length ? ts.map(t => `<li><div class="grow"><div class="t">${esc(t.title)}${t.active===false?' <span class="hint">(oculta)</span>':''}</div>
-    <div class="s">+${fmt(t.reward)} Unicoins · Para: ${esc(audLabel(t))}${t.proof?' · com comprovação':''}${t.repeat?' · repetível':''}</div></div>
-    <button class="btn ghost sm" data-tedit="${t.id}">Editar</button><button class="btn ghost sm" data-ttoggle="${t.id}">${t.active===false?'Mostrar':'Ocultar'}</button>
-    <button class="btn bad sm" data-tdel="${t.id}" ${S.confirmTDel===t.id?'data-confirm="1"':''}>${S.confirmTDel===t.id?'Confirmar':'Excluir'}</button></li>`).join('')
+  const ts = [...S.tasks].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  $('#taskList').innerHTML = ts.length ? ts.map(t => `<li><div class="grow"><div class="t">${esc(t.title)}${t.active === false ? ' <span class="hint">(oculta)</span>' : ''}${isExpired(t) ? ' <span class="hint">(prazo encerrado)</span>' : ''}</div>
+    <div class="s">+${fmt(t.reward)} Unicoins · Para: ${esc(audLabel(t))}${t.deadlineAt ? ' · até ' + dateBR(t.deadlineAt) : ''}${t.proof ? ' · com comprovação' : ''}${t.repeat ? ' · repetível' : ''}</div></div>
+    <button class="btn ghost sm" data-tprog="${t.id}">Acompanhar</button><button class="btn ghost sm" data-tedit="${t.id}">Editar</button><button class="btn ghost sm" data-ttoggle="${t.id}">${t.active === false ? 'Mostrar' : 'Ocultar'}</button>
+    <button class="btn bad sm" data-tdel="${t.id}" ${S.confirmTDel === t.id ? 'data-confirm="1"' : ''}>${S.confirmTDel === t.id ? 'Confirmar' : 'Excluir'}</button></li>`).join('')
     : '<li class="empty">Nenhuma tarefa ainda. Use o formulário para publicar a primeira.</li>';
-  const P = S.subs.filter(x=>x.status==='pendente').slice().reverse(), D = S.subs.filter(x=>x.status!=='pendente').slice(0,30);
-  loadProofs(P.concat(D.slice(0,10)));
-  $('#subPend').innerHTML = P.length ? P.map(x=>subBlock(x,true)).join('') : '<p class="empty">Nenhuma entrega aguardando conferência.</p>';
-  $('#subDone').innerHTML = D.length ? D.map(x=>subBlock(x,false)).join('') : '<p class="empty">As entregas aprovadas ou recusadas ficam aqui.</p>';
+  fillProgress();
+  const P = S.subsPend.slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.subs.filter(x => x.status !== 'pendente').slice(0, 30);
+  loadProofs(P.concat(D.slice(0, 10)));
+  $('#subPend').innerHTML = P.length ? P.map(x => subBlock(x, true)).join('') : '<p class="empty">Nenhuma entrega aguardando conferência.</p>';
+  $('#subDone').innerHTML = D.length ? D.map(x => subBlock(x, false)).join('') : '<p class="empty">As entregas aprovadas ou recusadas ficam aqui.</p>';
 }
-function setTMode(m){ S.tMode = m; document.querySelectorAll('[data-tmode]').forEach(b => b.setAttribute('aria-current', b.dataset.tmode === m)); $('#tModeSetor').hidden = m === 'pessoas'; $('#tModePessoas').hidden = m !== 'pessoas'; fillPeoplePick(); }
-function resetTaskForm(){ S.editingTask=null; S.tSel=new Set(); S.tFind=''; $('#taskForm').reset(); setTMode('setor'); $('#tActive').checked=true; $('#tFormTitle').textContent='Nova tarefa'; $('#tSave').textContent='Publicar tarefa'; $('#tCancel').hidden=true; }
-function editTask(id){ const t=S.tasks.find(x=>x.id===id); if(!t) return; S.editingTask=id;
-  $('#tTitle').value=t.title; $('#tDesc').value=t.desc||''; $('#tReward').value=t.reward; $('#tSector').value=t.sector; S.tSel=new Set(audOf(t).filter(x=>x.startsWith('uid:')).map(x=>x.slice(4))); S.tFind=''; $('#tFind').value=''; setTMode(isIndividual(t)?'pessoas':'setor'); $('#tProof').checked=!!t.proof; $('#tRepeat').checked=!!t.repeat; $('#tActive').checked=t.active!==false;
-  $('#tFormTitle').textContent='Editar tarefa'; $('#tSave').textContent='Salvar alterações'; $('#tCancel').hidden=false; $('#tTitle').focus(); }
-async function decide(id, ok){ await guard(async () => {
-  const reason = ok ? '' : (S.reasons[id]||'').trim().slice(0,200);
-  const msg = await runTransaction(fdb, async tx => {
-    const sRef = doc(fdb,'submissions',id); const ss = await tx.get(sRef);
-    const x = ss.exists() && ss.data();
-    if (!x || x.status !== 'pendente') return 'Esta entrega já foi conferida por outra pessoa da supervisão.';
-    let pRef, ps;
-    if (ok) { pRef = doc(fdb,'players',x.player); ps = await tx.get(pRef); }
-    if (ok && ps.exists()) {
-      const p = ps.data();
-      tx.update(pRef, { balance:(p.balance||0) + x.reward, earned:(p.earned||0) + x.reward });
-      tx.set(doc(fdb,'ledger','task_'+id), { player:x.player, amount:x.reward, kind:'task', reason:'Tarefa: '+x.taskTitle, by:S.me, at:now() });
-    }
-    tx.update(sRef, { status: ok?'aprovada':'recusada', reason, doneBy:S.me, doneAt:now() });
-    return ok ? `${fmt(x.reward)} Unicoins creditados para ${nm(x.player)}.` : 'Entrega recusada.';
-  });
-  delete S.reasons[id]; toast(msg); }); }
-function zoom(src){ const d=document.createElement('div'); d.className='lb'; d.setAttribute('role','dialog'); d.innerHTML=`<img src="${src}" alt="Comprovação ampliada">`;
-  const close=()=>{ d.remove(); document.removeEventListener('keydown',k); }; const k=e=>{ if(e.key==='Escape') close(); };
-  d.addEventListener('click', close); document.addEventListener('keydown',k); document.body.appendChild(d); }
+function openProgress(id){
+  closeProgress(); S.progressTask = id; S.progressSubs = null;
+  progUnsub = onSnapshot(query(collection(fdb, 'submissions'), where('task', '==', id)), q => { S.progressSubs = q.docs.map(d => ({ id:d.id, ...d.data() })); fillProgress(); }, onErr);
+  fillProgress();
+}
+function closeProgress(){ if (progUnsub) progUnsub(); progUnsub = null; S.progressTask = null; S.progressSubs = []; const b = $('#progressBox'); if (b) b.hidden = true; }
+function fillProgress(){
+  const box = $('#progressBox'); if (!box) return;
+  const t = S.tasks.find(x => x.id === S.progressTask);
+  if (!t) { box.hidden = true; return; }
+  box.hidden = false;
+  if (S.progressSubs === null) { box.innerHTML = `<h3>${esc(t.title)}</h3><p class="hint">Carregando…</p>`; return; }
+  const aud = audiencePlayers(t);
+  const st = id => { const mine = S.progressSubs.filter(x => x.player === id); if (mine.some(x => x.status === 'aprovada')) return ['aprovada', t.repeat ? `Aprovada (${mine.filter(x => x.status === 'aprovada').length}x)` : 'Concluída']; if (mine.some(x => x.status === 'pendente')) return ['pendente', 'Em análise']; if (mine.some(x => x.status === 'recusada')) return ['recusada', 'Recusada']; return ['', isExpired(t) ? 'Não fez' : 'Não enviou']; };
+  const rows = aud.map(p => ({ p, s:st(p.id) }));
+  const okN = rows.filter(r => r.s[0] === 'aprovada').length;
+  box.innerHTML = `<div class="section-head" style="margin:0 0 6px"><h3 style="margin:0">${esc(t.title)}</h3><button class="btn ghost sm" id="progClose">Fechar</button></div>
+    <p class="hint" style="margin:0;font-size:14px">${okN} de ${aud.length} concluíram · Para: ${esc(audLabel(t))}</p>
+    <div class="prog">${rows.length ? rows.map(r => `<div><span>${esc(nm(r.p.id))}</span>${r.s[0] ? `<span class="status ${r.s[0]}">${r.s[1]}</span>` : `<span class="hint" style="font-size:12px">${r.s[1]}</span>`}</div>`).join('') : '<p class="empty">Ninguém cadastrado para esta tarefa ainda.</p>'}</div>`;
+}
 
-/* ---------- Actions ---------- */
-async function guard(fn){ if (S.busy) return; S.busy = true; try { await fn(); } catch(e){ toast(e && e.code==='permission-denied' ? 'O banco não permitiu esta ação para o seu acesso.' : e && e.code==='resource-exhausted' ? 'Limite diário do plano gratuito do Firebase atingido. Tente amanhã.' : e && e.code==='failed-precondition' ? 'Muita gente mexendo nisso agora. Tente de novo em alguns segundos.' : e && e.code==='unavailable' ? 'Sem conexão com o banco. Verifique a internet.' : 'Não foi possível salvar. Tente de novo em instantes.'); console.error(e); } finally { S.busy = false; } }
+/* Prêmios */
+function fillSupItems(){
+  const items = [...S.items].sort((a, b) => (a.sector + a.cost).localeCompare(b.sector + b.cost, undefined, { numeric:true }));
+  $('#itemList').innerHTML = items.length ? items.map(i => {
+    const n = S.reds.filter(r => r.item === i.id && r.season === S.cfg.seasonKey && r.status !== 'recusada').length;
+    return `<li>${safeImg(i.image) ? `<img class="mini" src="${safeImg(i.image)}" alt="">` : `<span style="font-size:24px" aria-hidden="true">${esc(i.emoji || '🎁')}</span>`}
+    <div class="grow"><div class="t">${esc(i.name)}${i.active === false ? ' <span class="hint">(oculto)</span>' : ''}</div>
+    <div class="s">${fmt(i.cost)} Unicoins · ${(SECT[i.sector] || {}).name} · ${i.stock == null ? 'estoque livre' : fmt(i.stock) + ' em estoque'} · ${n} ${n === 1 ? 'resgate' : 'resgates'} na temporada</div></div>
+    <button class="btn ghost sm" data-edit="${i.id}">Editar</button><button class="btn ghost sm" data-toggle="${i.id}">${i.active === false ? 'Mostrar' : 'Ocultar'}</button>
+    <button class="btn bad sm" data-del="${i.id}" ${S.confirmDel === i.id ? 'data-confirm="1"' : ''}>${S.confirmDel === i.id ? 'Confirmar' : 'Excluir'}</button></li>`; }).join('')
+    : '<li class="empty">Nenhum prêmio cadastrado. Use o formulário para criar o primeiro.</li>';
+}
+
+/* Moedas */
+function activePlayers(){ return Object.values(S.players).filter(p => !p.blocked).sort((a, b) => nm(a.id).localeCompare(nm(b.id))); }
+function fillSupCoins(){
+  const sel = $('#cTarget'), keep = sel.value, ps = activePlayers();
+  sel.innerHTML = '<option value="">Selecione…</option>' + ['fin', 'chat'].map(k => `<optgroup label="${SECT[k].name}">${ps.filter(p => p.sector === k).map(p => `<option value="${p.id}">${esc(nm(p.id))} — ${fmt(bal(p.id))}</option>`).join('')}</optgroup>`).join('');
+  sel.value = keep;
+  $('#playerList').innerHTML = ps.length ? ps.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · ganhou ${fmt(earned(p.id))} na temporada</div></div>
+    <span class="price" style="font-size:18px">${coin}${fmt(bal(p.id))}</span>${S.owner ? `<button class="btn bad sm" style="flex:none" data-rp="${p.id}" ${S.confirmRp === p.id ? 'data-confirm="1"' : ''}>${S.confirmRp === p.id ? 'Confirmar' : 'Zerar'}</button>` : ''}</li>`).join('')
+    : '<li class="empty">Quando os colaboradores se cadastrarem, eles aparecem aqui.</li>';
+  const L = S.ledger.slice(0, 40);
+  $('#ledgerList').innerHTML = L.length ? L.map(l => ledgerLi(l, true)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
+}
+
+/* Pedidos */
+function fillSupOrders(){
+  const O = S.redsOpen.slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.reds.filter(r => r.status === 'entregue' || r.status === 'recusada').slice(0, 60);
+  $('#pendList').innerHTML = O.length ? O.map(r => `<div class="subitem"><span style="font-size:26px" aria-hidden="true">${esc(r.emoji || '🎁')}</span><div>
+    <div class="t" style="font-weight:600">${esc(nm(r.player))} · ${esc(r.itemName)} <span class="status ${r.status}">${RED_LAB[r.status]}</span></div>
+    <div class="s hint" style="font-size:13px">${(SECT[r.sector] || {}).name || ''} · ${fmt(r.cost)} Unicoins · ${when(r.at)}</div>
+    <div class="row" style="margin-top:10px"><input class="in" id="o_${r.id}" data-obs="${r.id}" placeholder="Observação para o colaborador (opcional)" value="${esc(S.obs[r.id] ?? r.obs ?? '')}" style="flex:2 1 200px"></div>
+    <div class="row" style="margin-top:8px">${r.status === 'pendente' ? `<button class="btn ghost sm" style="flex:none" data-red="${r.id}" data-to="separacao">Em separação</button>` : ''}
+      <button class="btn ok sm" style="flex:none" data-red="${r.id}" data-to="entregue">Entregue</button><button class="btn bad sm" style="flex:none" data-red="${r.id}" data-to="recusada">Recusar e estornar</button></div></div></div>`).join('')
+    : '<p class="empty">Nenhum pedido em aberto.</p>';
+  $('#doneList').innerHTML = D.length ? D.map(r => `<li><span style="font-size:22px" aria-hidden="true">${esc(r.emoji || '🎁')}</span><div class="grow"><div class="t">${esc(r.itemName)}</div>
+    <div class="s">${esc(nm(r.player))} · ${fmt(r.cost)} Unicoins · ${when(r.doneAt || r.at)}${r.obs ? ' · ' + esc(r.obs) : ''}</div></div><span class="status ${r.status}">${RED_LAB[r.status]}</span></li>`).join('')
+    : '<li class="empty">Pedidos entregues ou recusados ficam aqui.</li>';
+}
+
+/* Painel */
+async function loadKpis(){
+  if (S.kpiLoading) return; S.kpiLoading = true; S.kpi = null; renderKpis();
+  try {
+    const [rs, ss] = await Promise.all([getDocs(collection(fdb, 'redemptions')), getDocs(collection(fdb, 'submissions'))]);
+    const reds = rs.docs.map(d => d.data()).filter(r => r.season === S.cfg.seasonKey);
+    const subs = ss.docs.map(d => d.data()).filter(x => (x.at || 0) >= (S.cfg.seasonStart || 0));
+    const ps = activePlayers().filter(p => !supIds().includes(p.id) && !ADMIN_UIDS.includes(p.id));
+    const ok = subs.filter(x => x.status === 'aprovada'), no = subs.filter(x => x.status === 'recusada');
+    const top = (arr, key) => { const m = {}; arr.forEach(x => m[x[key]] = (m[x[key]] || 0) + 1); return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 5); };
+    S.kpi = {
+      people:ps.length, fin:ps.filter(p => p.sector === 'fin').length, chat:ps.filter(p => p.sector === 'chat').length,
+      circ:ps.reduce((s, p) => s + bal(p.id), 0), dist:ps.reduce((s, p) => s + earned(p.id), 0),
+      ok:ok.length, no:no.length, pend:subs.filter(x => x.status === 'pendente').length,
+      rate:ok.length + no.length ? Math.round(100 * ok.length / (ok.length + no.length)) : null,
+      trocas:reds.filter(r => r.status !== 'recusada').length, abertos:reds.filter(r => r.status === 'pendente' || r.status === 'separacao').length,
+      spent:reds.filter(r => r.status !== 'recusada').reduce((s, r) => s + (r.cost || 0), 0),
+      topTasks:top(ok, 'taskTitle'), topItems:top(reds.filter(r => r.status !== 'recusada'), 'itemName')
+    };
+  } catch(e) { console.error(e); S.kpi = { error:true }; }
+  S.kpiLoading = false; renderKpis();
+}
+function renderKpis(){
+  const box = $('#kpis'); if (!box) return;
+  const k = S.kpi;
+  if (!k) { box.innerHTML = '<p class="hint">Calculando…</p>'; return; }
+  if (k.error) { box.innerHTML = '<p class="empty">Não foi possível calcular agora. Tente Atualizar.</p>'; return; }
+  const card = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+  const topList = (arr, empty) => arr.length ? `<ul class="list">${arr.map(([n, c], i) => `<li><span class="pos ${i === 0 ? 'p1' : ''}">${i + 1}</span><div class="grow t">${esc(n)}</div><span class="hint">${c}x</span></li>`).join('')}</ul>` : `<p class="empty">${empty}</p>`;
+  box.innerHTML = `<div class="kpis">${card(fmt(k.people), `colaboradores ativos (${k.fin} Financeiro · ${k.chat} Chat)`)}${card(fmt(k.dist), 'moedas distribuídas')}${card(fmt(k.circ), 'moedas em circulação')}${card(fmt(k.spent), 'moedas trocadas por prêmios')}
+    ${card(fmt(k.ok), 'tarefas aprovadas')}${card(k.rate === null ? '—' : k.rate + '%', 'taxa de aprovação')}${card(fmt(k.pend), 'entregas aguardando')}${card(fmt(k.trocas), `prêmios resgatados (${k.abertos} em aberto)`)}</div>
+    <div class="cols" style="margin-top:16px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div><h3>Tarefas mais concluídas</h3>${topList(k.topTasks, 'Nenhuma tarefa aprovada ainda.')}</div>
+    <div><h3>Prêmios mais trocados</h3>${topList(k.topItems, 'Nenhum prêmio trocado ainda.')}</div></div>`;
+}
+function fillAudit(){
+  const box = $('#auditList'); if (!box) return;
+  box.innerHTML = S.audit.length ? S.audit.map(a => `<li><div class="grow"><div class="t">${esc(a.action)}</div><div class="s">${esc(a.detail || '')}</div></div><div class="s hint" style="text-align:right;font-size:13px">${esc(a.byName || nm(a.by))}<br>${when(a.at)}</div></li>`).join('') : '<li class="empty">Nenhuma ação registrada ainda.</li>';
+}
+
+/* Colaboradores (administrador) */
+function fillColab(){
+  const q = S.pFind.toLowerCase(), sups = supIds();
+  const ps = Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id) && (nm(p.id).toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q))).sort((a, b) => (!!a.blocked - !!b.blocked) || nm(a.id).localeCompare(nm(b.id)));
+  $('#colabList').innerHTML = ps.length ? ps.map(p => `<li style="flex-wrap:wrap">
+    <div class="grow" style="min-width:200px"><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="in sm" data-cname="${p.id}" id="cn_${p.id}" value="${esc(S.names[p.id] ?? p.name ?? '')}" maxlength="60" aria-label="Nome" style="flex:1 1 140px"><button class="btn ghost sm" style="flex:none" data-rename="${p.id}">Salvar</button></div>
+      <div class="s" style="margin-top:4px">${esc(p.email || 'e-mail ainda não registrado')}${sups.includes(p.id) ? '<span class="tag-role">Supervisão</span>' : ''}${p.blocked ? '<span class="tag-role blocked">Removido</span>' : ''} · saldo ${fmt(bal(p.id))}</div></div>
+    <select class="in sm" style="width:auto;flex:none" data-move="${p.id}" aria-label="Time de ${esc(nm(p.id))}"><option value="fin" ${p.sector === 'fin' ? 'selected' : ''}>Financeiro</option><option value="chat" ${p.sector === 'chat' ? 'selected' : ''}>Chat Uniasselvi</option></select>
+    <button class="btn ghost sm" style="flex:none" data-pwd="${p.id}" ${p.email ? '' : 'disabled'}>Redefinir senha</button>
+    <button class="btn ${p.blocked ? 'ok' : 'bad'} sm" style="flex:none" data-block="${p.id}" ${S.confirmBlock === p.id ? 'data-confirm="1"' : ''}>${S.confirmBlock === p.id ? 'Confirmar' : p.blocked ? 'Reativar' : 'Remover acesso'}</button></li>`).join('')
+    : '<li class="empty">Nenhum colaborador encontrado.</li>';
+}
+
+/* Acessos */
+function fillAccess(){
+  $('#slots').innerHTML = [0, 1].map(i => { const id = S.cfg.supervisors[i];
+    return `<div class="slot"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow">${id ? `<b>${esc(nm(id))}</b>` : '<span class="hint">Acesso livre</span>'}</div>
+    ${id && S.owner ? `<button class="btn bad sm" data-unslot="${i}">Remover</button>` : ''}</div>`; }).join('');
+  if (!S.owner) return;
+  const sups = supIds(), all = activePlayers();
+  const reqs = all.filter(p => p.supRequest && !sups.includes(p.id));
+  $('#reqList').innerHTML = reqs.length ? reqs.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · pediu acesso de supervisão</div></div>
+    <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
+  const others = all.filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id));
+  $('#peopleList').innerHTML = others.length ? others.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[0, 1].map(i => `<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
+}
+
+/* ---------- Ações ---------- */
+async function guard(fn){
+  if (S.busy) return; S.busy = true;
+  try { await fn(); }
+  catch(e){ console.error(e); toast(e && e.code === 'permission-denied' ? 'O banco não permitiu esta ação para o seu acesso.' : e && e.code === 'resource-exhausted' ? 'Limite diário do plano gratuito do Firebase atingido. Tente amanhã.' : e && e.code === 'failed-precondition' ? 'Muita gente mexendo nisso agora. Tente de novo em alguns segundos.' : e && e.code === 'unavailable' ? 'Sem conexão com o banco. Verifique a internet.' : 'Não foi possível salvar. Tente de novo em instantes.'); }
+  finally { S.busy = false; }
+}
 
 async function join(name, sector, wantSup){ await guard(async () => {
-  await setDoc(doc(fdb,'players',S.me), { name, sector, supRequest:!!wantSup, balance:0, earned:0, joinedAt:now() });
+  await setDoc(doc(fdb, 'players', S.me), { name, sector, supRequest:!!wantSup, balance:0, earned:0, joinedAt:now(), email:S.email });
   S.tab = 'loja'; toast('Bem-vindo ao Unicoins!'); }); }
 
 async function buy(id){ await guard(async () => {
   const p = me(); if (!p) return;
+  const season = S.cfg.seasonKey;
+  if (!season) return toast('A loja ainda não foi aberta pelo administrador.');
+  const rid = id + '__' + S.me + '__' + season;
   const res = await runTransaction(fdb, async tx => {
-    const pRef = doc(fdb,'players',S.me), iRef = doc(fdb,'items',id);
-    const ps = await tx.get(pRef), is = await tx.get(iRef);
+    const pRef = doc(fdb, 'players', S.me), iRef = doc(fdb, 'items', id), rRef = doc(fdb, 'redemptions', rid);
+    const ps = await tx.get(pRef), is = await tx.get(iRef), rs = await tx.get(rRef);
     if (!is.exists() || is.data().active !== true) return 'Este prêmio saiu da loja.';
+    if (rs.exists() && rs.data().status !== 'recusada') return 'Você já resgatou este prêmio nesta temporada.';
     const it = is.data(), pl = ps.data(), b = pl.balance || 0;
     if (it.sector !== 'ambos' && it.sector !== pl.sector) return 'Este prêmio não é do seu setor.';
     if (b < it.cost) return 'Saldo insuficiente.';
     if (it.stock !== null && it.stock !== undefined && it.stock <= 0) return 'Este prêmio acabou de esgotar.';
-    const rRef = doc(collection(fdb,'redemptions')), rid = rRef.id, t = now();
+    const t = now();
     tx.update(pRef, { balance:b - it.cost, lastRedemption:rid });
     if (it.stock !== null && it.stock !== undefined) tx.update(iRef, { stock:it.stock - 1, lastRedemption:rid });
-    tx.set(rRef, { player:S.me, sector:pl.sector, item:id, itemName:it.name, emoji:it.emoji||'🎁', cost:it.cost, status:'pendente', at:t });
-    tx.set(doc(fdb,'ledger','redeem_'+rid), { player:S.me, amount:-it.cost, kind:'redeem', reason:'Troca: '+it.name, by:S.me, at:t, ref:rid });
+    tx.set(rRef, { player:S.me, sector:pl.sector, item:id, itemName:it.name, emoji:it.emoji || '🎁', cost:it.cost, status:'pendente', season, at:t });
+    tx.set(doc(collection(fdb, 'ledger')), { player:S.me, amount:-it.cost, kind:'redeem', reason:'Troca: ' + it.name, by:S.me, at:t, ref:rid });
     return null;
   });
   S.confirmId = null; fillStore();
-  toast(res || 'Troca feita! A supervisão vai combinar a entrega.'); }); }
+  toast(res || 'Troca feita! Acompanhe a entrega em Meus resgates.'); }); }
 
 async function adjust(pid, amount, reason, kind){
   return runTransaction(fdb, async tx => {
-    const r = doc(fdb,'players',pid), s = await tx.get(r);
+    const r = doc(fdb, 'players', pid), s = await tx.get(r);
     if (!s.exists()) return 0;
     const b = s.data().balance || 0;
     const real = amount < 0 ? -Math.min(-amount, Math.max(0, b)) : amount;
     if (!real) return 0;
     const k = kind || (real > 0 ? 'credit' : 'debit');
-    tx.update(r, isEarnKind(k) ? { balance:b + real, earned:(s.data().earned||0) + real } : { balance:b + real });
-    tx.set(doc(collection(fdb,'ledger')), { player:pid, amount:real, kind:k, reason, by:S.me, at:now() });
+    tx.update(r, isEarnKind(k) ? { balance:b + real, earned:(s.data().earned || 0) + real } : { balance:b + real });
+    tx.set(doc(collection(fdb, 'ledger')), { player:pid, amount:real, kind:k, reason, by:S.me, at:now() });
     return real;
   });
 }
@@ -734,183 +948,287 @@ async function bulkCredit(ids, amt, why){
   for (let i = 0; i < ids.length; i += 200) {
     const batch = writeBatch(fdb), t = now();
     ids.slice(i, i + 200).forEach(pid => {
-      batch.update(doc(fdb,'players',pid), { balance:increment(amt), earned:increment(amt) });
-      batch.set(doc(collection(fdb,'ledger')), { player:pid, amount:amt, kind:'bulk', reason:why, by:S.me, at:t });
+      batch.update(doc(fdb, 'players', pid), { balance:increment(amt), earned:increment(amt) });
+      batch.set(doc(collection(fdb, 'ledger')), { player:pid, amount:amt, kind:'bulk', reason:why, by:S.me, at:t });
     });
     await batch.commit();
   }
 }
-
-async function resetPlayers(ids){
-  const targets = ids.map(id => S.players[id]).filter(p => p && ((p.balance||0) !== 0 || (p.earned||0) !== 0));
+async function resetPlayers(ids, reason){
+  const targets = ids.map(id => S.players[id]).filter(p => p && ((p.balance || 0) !== 0 || (p.earned || 0) !== 0));
   for (let i = 0; i < targets.length; i += 200) {
     const batch = writeBatch(fdb), t = now();
     targets.slice(i, i + 200).forEach(p => {
-      batch.update(doc(fdb,'players',p.id), { balance:0, earned:0 });
-      if (p.balance) batch.set(doc(collection(fdb,'ledger')), { player:p.id, amount:-(p.balance||0), kind:'reset', reason:'Moedas zeradas pela supervisão', by:S.me, at:t });
+      batch.update(doc(fdb, 'players', p.id), { balance:0, earned:0 });
+      if (p.balance) batch.set(doc(collection(fdb, 'ledger')), { player:p.id, amount:-(p.balance || 0), kind:'reset', reason:reason || 'Moedas zeradas pela supervisão', by:S.me, at:t });
     });
     await batch.commit();
   }
   return targets.length;
 }
+async function endSeason(){ await guard(async () => {
+  const key = S.cfg.seasonKey || 'S1', n = parseInt(key.slice(1), 10) || 1;
+  const curName = S.cfg.seasonName || 'Temporada ' + n;
+  const nextName = ($('#nextSeason') && $('#nextSeason').value.trim()) || 'Temporada ' + (n + 1);
+  const ranking = {};
+  ['fin', 'chat'].forEach(k => { ranking[k] = activePlayers().filter(p => p.sector === k && earned(p.id) > 0).sort((a, b) => earned(b.id) - earned(a.id)).slice(0, 10).map(p => ({ name:nm(p.id), earned:earned(p.id) })); });
+  await setDoc(doc(fdb, 'seasons', key), { key, name:curName, startedAt:S.cfg.seasonStart || 0, endedAt:now(), ranking });
+  await resetPlayers(Object.keys(S.players), 'Fim da ' + curName);
+  await cfgWrite({ seasonKey:'S' + (n + 1), seasonName:nextName, seasonStart:now() });
+  audit('Encerrou temporada', `${curName} encerrada; início da ${nextName}`);
+  toast(`${curName} encerrada. Começou a ${nextName}!`); }); }
 
-async function settle(rid, ok){ await guard(async () => {
+async function settle(rid, to){ await guard(async () => {
+  const obs = (S.obs[rid] ?? '').trim().slice(0, 200);
   const msg = await runTransaction(fdb, async tx => {
-    const rRef = doc(fdb,'redemptions',rid), rs = await tx.get(rRef);
+    const rRef = doc(fdb, 'redemptions', rid), rs = await tx.get(rRef);
     const r = rs.exists() && rs.data();
-    if (!r || r.status !== 'pendente') return 'Este pedido já foi resolvido por outra pessoa da supervisão.';
-    if (!ok) {
-      const pRef = doc(fdb,'players',r.player), iRef = doc(fdb,'items',r.item);
+    if (!r || r.status === 'entregue' || r.status === 'recusada') return 'Este pedido já foi resolvido por outra pessoa da supervisão.';
+    if (to === 'separacao' && r.status !== 'pendente') return 'Este pedido já está em separação.';
+    if (to === 'recusada') {
+      const pRef = doc(fdb, 'players', r.player), iRef = doc(fdb, 'items', r.item);
       const ps = await tx.get(pRef), is = await tx.get(iRef);
-      if (ps.exists()) tx.update(pRef, { balance:(ps.data().balance||0) + r.cost });
+      if (ps.exists()) tx.update(pRef, { balance:(ps.data().balance || 0) + r.cost });
       if (is.exists() && is.data().stock !== null && is.data().stock !== undefined) tx.update(iRef, { stock:is.data().stock + 1 });
-      tx.set(doc(fdb,'ledger','refund_'+rid), { player:r.player, amount:r.cost, kind:'refund', reason:'Estorno: '+r.itemName, by:S.me, at:now() });
+      tx.set(doc(collection(fdb, 'ledger')), { player:r.player, amount:r.cost, kind:'refund', reason:'Estorno: ' + r.itemName, by:S.me, at:now() });
     }
-    tx.update(rRef, { status: ok?'entregue':'recusada', doneBy:S.me, doneAt:now() });
-    return ok ? 'Pedido marcado como entregue.' : 'Pedido recusado e Unicoins devolvidos.';
+    tx.update(rRef, { status:to, obs, doneBy:S.me, doneAt:now() });
+    return { separacao:'Pedido marcado como em separação.', entregue:'Pedido marcado como entregue.', recusada:'Pedido recusado e Unicoins devolvidos.' }[to] + '|' + nm(r.player) + ' · ' + r.itemName;
   });
-  toast(msg); }); }
+  const [m, det] = String(msg).split('|');
+  if (det) { audit({ separacao:'Pedido em separação', entregue:'Pedido entregue', recusada:'Pedido recusado e estornado' }[to], det); delete S.obs[rid]; }
+  toast(m); }); }
 
-function setThumb(){ const t=$('#fThumb'); if(!t) return; const v=safeImg(S.formImg); t.innerHTML = v?`<img src="${v}" alt="Imagem do prêmio">`:'Sem imagem'; $('#fImgDel').hidden=!v; }
-function readImage(file, maxLen = 110000){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=rej; fr.onload=()=>{ const img=new Image(); img.onerror=rej; img.onload=()=>{
-  let max=720,q=.85,out=''; for(let k=0;k<7;k++){ const sc=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*sc)); c.height=Math.max(1,Math.round(img.height*sc));
-    const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height); out=c.toDataURL('image/jpeg',q); if(out.length<maxLen) break; max*=.8; q=Math.max(.5,q-.08); }
-  res(out); }; img.src=fr.result; }; fr.readAsDataURL(file); }); }
-function resetForm(){ S.editing=null; S.formImg=null; setThumb(); $('#itemForm').reset(); $('#fEmoji').value='🎁'; $('#fActive').checked=true; $('#formTitle').textContent='Novo prêmio'; $('#fSave').textContent='Adicionar à loja'; $('#fCancel').hidden=true; }
-function editItem(id){ const i=S.items.find(x=>x.id===id); if(!i) return; S.editing=id;
-  $('#fEmoji').value=i.emoji||'🎁'; $('#fName').value=i.name; $('#fDesc').value=i.desc||''; $('#fCost').value=i.cost; $('#fStock').value=i.stock??''; $('#fSector').value=i.sector; $('#fActive').checked=i.active!==false; S.formImg=safeImg(i.image); setThumb();
-  $('#formTitle').textContent='Editar prêmio'; $('#fSave').textContent='Salvar alterações'; $('#fCancel').hidden=false; $('#fName').focus(); }
+async function decide(id, ok){ await guard(async () => {
+  const reason = ok ? '' : (S.reasons[id] || '').trim().slice(0, 200);
+  const msg = await runTransaction(fdb, async tx => {
+    const sRef = doc(fdb, 'submissions', id), ss = await tx.get(sRef);
+    const x = ss.exists() && ss.data();
+    if (!x || x.status !== 'pendente') return 'Esta entrega já foi conferida por outra pessoa da supervisão.';
+    let pRef, ps;
+    if (ok) { pRef = doc(fdb, 'players', x.player); ps = await tx.get(pRef); }
+    if (ok && ps.exists()) {
+      const p = ps.data();
+      tx.update(pRef, { balance:(p.balance || 0) + x.reward, earned:(p.earned || 0) + x.reward });
+      tx.set(doc(fdb, 'ledger', 'task_' + id), { player:x.player, amount:x.reward, kind:'task', reason:'Tarefa: ' + x.taskTitle, by:S.me, at:now() });
+    }
+    tx.update(sRef, { status:ok ? 'aprovada' : 'recusada', reason, doneBy:S.me, doneAt:now() });
+    return (ok ? `${fmt(x.reward)} Unicoins creditados para ${nm(x.player)}.` : 'Entrega recusada.') + '|' + nm(x.player) + ' · ' + x.taskTitle;
+  });
+  const [m, det] = String(msg).split('|');
+  if (det) audit(ok ? 'Aprovou entrega' : 'Recusou entrega', det + (reason ? ' · ' + reason : ''));
+  delete S.reasons[id]; toast(m); }); }
 
-/* ---------- Events ---------- */
+/* ---------- Formulários da supervisão ---------- */
+function setThumb(){ const t = $('#fThumb'); if (!t) return; const v = safeImg(S.formImg); t.innerHTML = v ? `<img src="${v}" alt="Imagem do prêmio">` : 'Sem imagem'; $('#fImgDel').hidden = !v; }
+function readImage(file, maxLen = 110000){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = rej; fr.onload = () => { const img = new Image(); img.onerror = rej; img.onload = () => {
+  let max = 720, q = .85, out = '';
+  for (let k = 0; k < 7; k++) { const sc = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * sc)); c.height = Math.max(1, Math.round(img.height * sc));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); out = c.toDataURL('image/jpeg', q); if (out.length < maxLen) break; max *= .8; q = Math.max(.5, q - .08); }
+  res(out); }; img.src = fr.result; }; fr.readAsDataURL(file); }); }
+function resetForm(){ S.editing = null; S.formImg = null; $('#itemForm').reset(); setThumb(); $('#fEmoji').value = '🎁'; $('#fActive').checked = true; $('#formTitle').textContent = 'Novo prêmio'; $('#fSave').textContent = 'Adicionar à loja'; $('#fCancel').hidden = true; }
+function editItem(id){ const i = S.items.find(x => x.id === id); if (!i) return; S.editing = id;
+  $('#fEmoji').value = i.emoji || '🎁'; $('#fName').value = i.name; $('#fDesc').value = i.desc || ''; $('#fCost').value = i.cost; $('#fStock').value = i.stock ?? ''; $('#fSector').value = i.sector; $('#fActive').checked = i.active !== false; S.formImg = safeImg(i.image); setThumb();
+  $('#formTitle').textContent = 'Editar prêmio'; $('#fSave').textContent = 'Salvar alterações'; $('#fCancel').hidden = false; $('#fName').focus(); }
+function setTMode(m){ S.tMode = m; document.querySelectorAll('[data-tmode]').forEach(b => b.setAttribute('aria-current', b.dataset.tmode === m)); $('#tModeSetor').hidden = m === 'pessoas'; $('#tModePessoas').hidden = m !== 'pessoas'; fillPeoplePick(); }
+function resetTaskForm(){ S.editingTask = null; S.tSel = new Set(); S.tFind = ''; $('#taskForm').reset(); $('#tFind').value = ''; setTMode('setor'); $('#tActive').checked = true; $('#tFormTitle').textContent = 'Nova tarefa'; $('#tSave').textContent = 'Publicar tarefa'; $('#tCancel').hidden = true; }
+const toDateInput = ms => { if (!ms) return ''; const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function editTask(id){ const t = S.tasks.find(x => x.id === id); if (!t) return; S.editingTask = id;
+  $('#tTitle').value = t.title; $('#tDesc').value = t.desc || ''; $('#tReward').value = t.reward; $('#tDeadline').value = toDateInput(t.deadlineAt); $('#tSector').value = t.sector;
+  S.tSel = new Set(audOf(t).filter(x => x.startsWith('uid:')).map(x => x.slice(4))); S.tFind = ''; $('#tFind').value = ''; setTMode(isIndividual(t) ? 'pessoas' : 'setor');
+  $('#tProof').checked = !!t.proof; $('#tRepeat').checked = !!t.repeat; $('#tActive').checked = t.active !== false;
+  $('#tFormTitle').textContent = 'Editar tarefa'; $('#tSave').textContent = 'Salvar alterações'; $('#tCancel').hidden = false; $('#tTitle').focus(); }
+function zoom(src){ const d = document.createElement('div'); d.className = 'lb'; d.setAttribute('role', 'dialog'); d.innerHTML = `<img src="${src}" alt="Comprovação ampliada">`;
+  const close = () => { d.remove(); document.removeEventListener('keydown', k); }; const k = e => { if (e.key === 'Escape') close(); };
+  d.addEventListener('click', close); document.addEventListener('keydown', k); document.body.appendChild(d); }
+
+/* ---------- Exportação (CSV para Excel) ---------- */
+function downloadCSV(name, header, rows){
+  const cell = v => { const s = String(v ?? ''); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = '\ufeff' + [header, ...rows].map(r => r.map(cell).join(';')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
+  a.download = `unicoins-${name}-${toDateInput(now())}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+const KIND = { credit:'Crédito', debit:'Débito', bulk:'Crédito do setor', task:'Tarefa aprovada', redeem:'Troca de prêmio', refund:'Estorno', reset:'Zeramento' };
+const secName = k => (SECT[k] || {}).name || '';
+async function exportData(kind){ await guard(async () => {
+  const seasons = Object.fromEntries(S.seasons.map(s => [s.key || s.id, s.name])); seasons[S.cfg.seasonKey] = seasonLabel();
+  const pl = id => S.players[id] || {};
+  if (kind === 'colab') return downloadCSV('colaboradores', ['Nome', 'E-mail', 'Time', 'Saldo', 'Ganho na temporada', 'Situação', 'Cadastro'],
+    Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id)).map(p => [nm(p.id), p.email || '', secName(p.sector), bal(p.id), earned(p.id), p.blocked ? 'Removido' : supIds().includes(p.id) ? 'Supervisão' : 'Ativo', dateBR(p.joinedAt)]));
+  const rows = (await getDocs(collection(fdb, { extrato:'ledger', trocas:'redemptions', entregas:'submissions' }[kind]))).docs.map(d => d.data()).sort(byAtDesc);
+  if (kind === 'extrato') downloadCSV('extrato', ['Data', 'Colaborador', 'Time', 'Movimento', 'Tipo', 'Valor', 'Feito por'], rows.map(l => [when(l.at), nm(l.player), secName(pl(l.player).sector), l.reason || '', KIND[l.kind] || l.kind || '', l.amount, nm(l.by)]));
+  if (kind === 'trocas') downloadCSV('trocas', ['Data', 'Colaborador', 'Time', 'Prêmio', 'Custo', 'Status', 'Temporada', 'Observação', 'Resolvido por', 'Resolvido em'], rows.map(r => [when(r.at), nm(r.player), secName(r.sector), r.itemName, r.cost, RED_LAB[r.status] || r.status, seasons[r.season] || r.season || '', r.obs || '', r.doneBy ? nm(r.doneBy) : '', when(r.doneAt)]));
+  if (kind === 'entregas') downloadCSV('entregas', ['Data', 'Colaborador', 'Time', 'Tarefa', 'Recompensa', 'Status', 'Motivo da recusa', 'Observação do colaborador', 'Conferido por', 'Conferido em'], rows.map(x => [when(x.at), nm(x.player), secName(x.sector), x.taskTitle, x.reward, SUB_LAB[x.status] || x.status, x.reason || '', x.note || '', x.doneBy ? nm(x.doneBy) : '', when(x.doneAt)]));
+  toast('Planilha baixada.'); }); }
+
+/* ---------- Eventos ---------- */
+function twoStep(key, id, refill){ S[key] = id; refill(); setTimeout(() => { if (S[key] === id) { S[key] = null; refill(); } }, 5000); }
 document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
   if (b.id === 'logout') { if (auth) await signOut(auth); return; }
   if (b.id === 'copyUid') { try { await navigator.clipboard.writeText(S.me); toast('UID copiado.'); } catch(_) { toast('Selecione e copie o UID manualmente.'); } return; }
   if (b.id === 'google') { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(err) { if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') toast(authMsg(err)); } return; }
-  if (b.id === 'forgot') { const em = ($('#lEmail').value||'').trim(); if (!em) return toast('Digite seu e-mail no campo acima.');
+  if (b.id === 'forgot') { const em = ($('#lEmail').value || '').trim(); if (!em) return toast('Digite seu e-mail no campo acima.');
     try { await sendPasswordResetEmail(auth, em); toast('Se existir conta, enviamos o link de nova senha para ' + em + '.'); } catch(err) { toast(authMsg(err)); } return; }
-  if (d.tab) { S.tab = d.tab; S.confirmId=null; return build(); }
-  if (d.sub) { S.sub = d.sub; return build(); }
-  if (d.open) { S.openTask=d.open; S.draft={note:'',image:null}; fillTasks(); const n=$('#sNote'); if(n) n.focus(); return; }
-  if (b.id === 'sCancel') { S.openTask=null; return fillTasks(); }
-  if (b.id === 'sImgDel') { S.draft.image=null; return fillTasks(); }
-  if (d.zoom) { const x=S.subs.find(s=>s.id===d.zoom); const v=x&&proofOf(x); if(v) zoom(v); return; }
+  if (b.id === 'viewBtn') { S.viewAs = (me() && me().sector) || 'fin'; S.tab = 'loja'; S.openTask = null; window.scrollTo(0, 0); return build(); }
+  if (d.viewas) { S.viewAs = d.viewas; return build(); }
+  if (b.id === 'exitView') { S.viewAs = null; S.tab = 'sup'; return build(); }
+  if (d.tab) { S.tab = d.tab; S.confirmId = null; if (d.tab !== 'tarefas') S.openTask = null; return build(); }
+  if (d.sub) { if (S.sub !== d.sub) closeProgress(); S.sub = d.sub; return build(); }
+  if (d.pick) { S.joinSector = d.pick; document.querySelectorAll('[data-pick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.pick === d.pick)); return; }
+  if (d.prev) { S.preview = d.prev; return fill(); }
+  if (d.buy) { if (d.confirm) return buy(d.buy); S.confirmId = d.buy; fillStore(); setTimeout(() => { if (S.confirmId === d.buy) { S.confirmId = null; if (S.tab === 'loja') fillStore(); } }, 5000); return; }
+  if (d.open) { S.openTask = d.open; S.draft = { note:'', image:null }; fillTasks(); const n = $('#sNote'); if (n) n.focus(); return; }
+  if (b.id === 'sCancel') { S.openTask = null; return fillTasks(); }
+  if (b.id === 'sImgDel') { S.draft.image = null; return fillTasks(); }
+  if (d.zoom) { const x = S.subs.find(s => s.id === d.zoom); const v = x && proofOf(x); if (v) zoom(v); return; }
   if (d.approve) return decide(d.approve, true);
   if (d.reject) return decide(d.reject, false);
   if (d.tmode) return setTMode(d.tmode);
-  if (d.reset && S.owner) {
-    const label = { fin:'do Financeiro', chat:'do Chat', all:'de todos' }[d.reset];
-    if (!d.confirm) { b.dataset.confirm = '1'; const old = b.textContent; b.textContent = 'Confirmar: zerar ' + label; setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = old; } }, 5000); return; }
-    return guard(async () => { const ids = Object.values(S.players).filter(p => d.reset === 'all' || p.sector === d.reset).map(p => p.id);
-      const n = await resetPlayers(ids); toast(n ? `Moedas e ranking zerados ${label} (${n} ${n===1?'pessoa':'pessoas'}).` : 'Já estava tudo zerado.'); });
-  }
-  if (d.rp && S.owner) {
-    if (!d.confirm) { S.confirmRp = d.rp; fillSup(); setTimeout(() => { if (S.confirmRp === d.rp) { S.confirmRp = null; if (S.sub === 'moedas') fillSup(); } }, 5000); return; }
-    S.confirmRp = null;
-    return guard(async () => { const n = await resetPlayers([d.rp]); toast(n ? `${nm(d.rp)} foi zerado e saiu do ranking.` : `${nm(d.rp)} já estava zerado.`); });
-  }
+  if (d.tprog) return openProgress(d.tprog);
+  if (b.id === 'progClose') return closeProgress();
   if (d.tedit) return editTask(d.tedit);
   if (b.id === 'tCancel') return resetTaskForm();
-  if (d.ttoggle) { const t=S.tasks.find(x=>x.id===d.ttoggle); return guard(()=>S.db.doc('tasks/'+d.ttoggle).update({active:t.active===false})); }
-  if (d.tdel) { if (d.confirm) { S.confirmTDel=null; if (S.editingTask===d.tdel) resetTaskForm(); return guard(async()=>{ await S.db.doc('tasks/'+d.tdel).delete(); toast('Tarefa excluída.'); }); }
-    S.confirmTDel=d.tdel; fillSup(); setTimeout(()=>{ if(S.confirmTDel===d.tdel){ S.confirmTDel=null; if(S.sub==='tarefas') fillSup(); } },5000); return; }
-  if (d.pick) { S.joinSector = d.pick; document.querySelectorAll('[data-pick]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.pick===d.pick)); return; }
-  if (b.id === 'fImgDel') { S.formImg=null; $('#fImg').value=''; return setThumb(); }
-  if (d.release) return guard(async () => { const s=[...S.cfg.supervisors]; const i=s.findIndex(x=>!x); if(i<0) return toast('Os 2 acessos estão ocupados. Remova alguém antes de liberar.');
-    s[i]=d.release; await S.db.doc('config/main').set({ supervisors:s }); await S.db.doc('players/'+d.release).update({ supRequest:false }); toast(`${nm(d.release)} liberado no acesso ${i+1}.`); });
-  if (d.deny) return guard(async () => { await S.db.doc('players/'+d.deny).update({ supRequest:false }); toast('Pedido recusado.'); });
-  if (d.prev) { S.preview = d.prev; S.previewSet = true; return fill(); }
-  if (d.buy) { if (d.confirm) return buy(d.buy); S.confirmId = d.buy; fillStore(); setTimeout(()=>{ if(S.confirmId===d.buy){ S.confirmId=null; if(S.tab==='loja') fillStore(); } },5000); return; }
-  if (d.deliver) return settle(d.deliver, true);
-  if (d.refuse) return settle(d.refuse, false);
+  if (d.ttoggle) { const t = S.tasks.find(x => x.id === d.ttoggle); return guard(async () => { await updateDoc(doc(fdb, 'tasks', d.ttoggle), { active:t.active === false }); audit(t.active === false ? 'Mostrou tarefa' : 'Ocultou tarefa', t.title); }); }
+  if (d.tdel) { if (!d.confirm) return twoStep('confirmTDel', d.tdel, fillSup);
+    S.confirmTDel = null; if (S.editingTask === d.tdel) resetTaskForm(); if (S.progressTask === d.tdel) closeProgress();
+    const t = S.tasks.find(x => x.id === d.tdel); return guard(async () => { await deleteDoc(doc(fdb, 'tasks', d.tdel)); audit('Excluiu tarefa', t ? t.title : ''); toast('Tarefa excluída.'); }); }
   if (d.edit) return editItem(d.edit);
-  if (d.toggle) { const i=S.items.find(x=>x.id===d.toggle); return guard(()=>S.db.doc('items/'+d.toggle).update({active:i.active===false})); }
-  if (d.del) { if (d.confirm) { S.confirmDel=null; if (S.editing===d.del) resetForm(); return guard(async()=>{ await S.db.doc('items/'+d.del).delete(); toast('Prêmio excluído.'); }); }
-    S.confirmDel = d.del; fillSup(); setTimeout(()=>{ if(S.confirmDel===d.del){ S.confirmDel=null; if(S.sub==='premios') fillSup(); } },5000); return; }
   if (b.id === 'fCancel') return resetForm();
-  if (d.slot !== undefined && d.pid) return guard(async () => { const s = [...S.cfg.supervisors].map(x => x===d.pid?null:x); s[+d.slot] = d.pid;
-    await S.db.doc('config/main').set({ supervisors:s }); if (S.players[d.pid]?.supRequest) await S.db.doc('players/'+d.pid).update({ supRequest:false }); toast(`${nm(d.pid)} agora é o acesso ${+d.slot+1}.`); });
-  if (d.unslot !== undefined) return guard(async () => { const s=[...S.cfg.supervisors]; s[+d.unslot]=null; await S.db.doc('config/main').set({ supervisors:s }); toast('Acesso liberado.'); });
+  if (b.id === 'fImgDel') { S.formImg = null; $('#fImg').value = ''; return setThumb(); }
+  if (d.toggle) { const i = S.items.find(x => x.id === d.toggle); return guard(async () => { await updateDoc(doc(fdb, 'items', d.toggle), { active:i.active === false }); audit(i.active === false ? 'Mostrou prêmio' : 'Ocultou prêmio', i.name); }); }
+  if (d.del) { if (!d.confirm) return twoStep('confirmDel', d.del, fillSup);
+    S.confirmDel = null; if (S.editing === d.del) resetForm();
+    const i = S.items.find(x => x.id === d.del); return guard(async () => { await deleteDoc(doc(fdb, 'items', d.del)); audit('Excluiu prêmio', i ? i.name : ''); toast('Prêmio excluído.'); }); }
+  if (d.red) return settle(d.red, d.to);
+  if (d.release) return guard(async () => { const s = [...S.cfg.supervisors]; const i = s.findIndex(x => !x); if (i < 0) return toast('Os 2 acessos estão ocupados. Remova alguém antes de liberar.');
+    s[i] = d.release; await cfgWrite({ supervisors:s }); await updateDoc(doc(fdb, 'players', d.release), { supRequest:false }); audit('Liberou acesso de supervisão', nm(d.release)); toast(`${nm(d.release)} liberado no acesso ${i + 1}.`); });
+  if (d.deny) return guard(async () => { await updateDoc(doc(fdb, 'players', d.deny), { supRequest:false }); audit('Recusou pedido de supervisão', nm(d.deny)); toast('Pedido recusado.'); });
+  if (d.slot !== undefined && d.pid) return guard(async () => { const s = S.cfg.supervisors.map(x => x === d.pid ? null : x); s[+d.slot] = d.pid;
+    await cfgWrite({ supervisors:s }); if (S.players[d.pid] && S.players[d.pid].supRequest) await updateDoc(doc(fdb, 'players', d.pid), { supRequest:false }); audit('Definiu acesso de supervisão', `${nm(d.pid)} no acesso ${+d.slot + 1}`); toast(`${nm(d.pid)} agora é o acesso ${+d.slot + 1}.`); });
+  if (d.unslot !== undefined) return guard(async () => { const s = [...S.cfg.supervisors]; const who = s[+d.unslot]; s[+d.unslot] = null; await cfgWrite({ supervisors:s }); audit('Removeu acesso de supervisão', nm(who)); toast('Acesso liberado.'); });
+  if (d.reset && S.owner) {
+    const label = { fin:'do Financeiro', chat:'do Chat' }[d.reset];
+    if (!d.confirm) { b.dataset.confirm = '1'; const old = b.textContent; b.textContent = 'Confirmar: zerar ' + label; setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = old; } }, 5000); return; }
+    return guard(async () => { const ids = activePlayers().filter(p => p.sector === d.reset).map(p => p.id);
+      const n = await resetPlayers(ids); if (n) audit('Zerou moedas do setor', SECT[d.reset].name + ` (${n} pessoas)`); toast(n ? `Moedas e ranking zerados ${label} (${n} ${n === 1 ? 'pessoa' : 'pessoas'}).` : 'Já estava tudo zerado.'); });
+  }
+  if (b.id === 'endSeason' && S.owner) {
+    if (!d.confirm) { b.dataset.confirm = '1'; b.textContent = 'Confirmar: encerrar ' + seasonLabel(); setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = 'Encerrar temporada'; } }, 6000); return; }
+    return endSeason();
+  }
+  if (d.rp && S.owner) { if (!d.confirm) return twoStep('confirmRp', d.rp, fillSup);
+    S.confirmRp = null; return guard(async () => { const n = await resetPlayers([d.rp]); if (n) audit('Zerou moedas', nm(d.rp)); toast(n ? `${nm(d.rp)} foi zerado e saiu do ranking.` : `${nm(d.rp)} já estava zerado.`); }); }
+  if (b.id === 'kpiRefresh') return loadKpis();
+  if (d.export) return exportData(d.export);
+  if (b.id === 'muralSave' || b.id === 'muralClear') return guard(async () => {
+    const text = b.id === 'muralClear' ? '' : ($('#muralText').value || '').trim().slice(0, 500);
+    await setDoc(doc(fdb, 'config', 'notice'), { text, by:S.me, at:now() }); S.muralDraft = null; if (b.id === 'muralClear') $('#muralText').value = '';
+    audit(text ? 'Publicou recado no mural' : 'Removeu recado do mural', text); toast(text ? 'Recado publicado.' : 'Recado removido.'); });
+  if (d.rename && S.owner) { const v = ($('#cn_' + d.rename).value || '').trim().replace(/\s+/g, ' ');
+    if (v.length < 3) return toast('O nome precisa ter pelo menos 3 letras.');
+    const old = nm(d.rename); return guard(async () => { await updateDoc(doc(fdb, 'players', d.rename), { name:v }); delete S.names[d.rename]; audit('Renomeou colaborador', `${old} → ${v}`); toast('Nome atualizado.'); }); }
+  if (d.pwd && S.owner) { const p = S.players[d.pwd]; if (!p || !p.email) return;
+    return guard(async () => { await sendPasswordResetEmail(auth, p.email); audit('Enviou redefinição de senha', `${nm(p.id)} (${p.email})`); toast('Link para criar nova senha enviado para ' + p.email + '.'); }); }
+  if (d.block && S.owner) { if (!d.confirm) return twoStep('confirmBlock', d.block, fillSup);
+    S.confirmBlock = null; const p = S.players[d.block]; if (!p) return;
+    return guard(async () => {
+      const block = !p.blocked;
+      await updateDoc(doc(fdb, 'players', p.id), block ? { blocked:true, supRequest:false } : { blocked:false });
+      if (block && supIds().includes(p.id)) await cfgWrite({ supervisors:S.cfg.supervisors.map(x => x === p.id ? null : x) });
+      audit(block ? 'Removeu acesso do colaborador' : 'Reativou colaborador', nm(p.id)); toast(block ? `${nm(p.id)} não acessa mais o Unicoins.` : `${nm(p.id)} foi reativado.`); }); }
 });
 
 document.addEventListener('change', e => {
-  if (e.target.dataset && e.target.dataset.tsel) { const id = e.target.dataset.tsel; if (e.target.checked) S.tSel.add(id); else S.tSel.delete(id); const n=S.tSel.size; $('#tSelCount').textContent = n ? `${n} ${n===1?'pessoa selecionada':'pessoas selecionadas'}` : 'Marque quem deve receber a tarefa.'; return; }
-  if (e.target.id === 'sImg' && e.target.files[0]) { const f=e.target.files[0];
-    if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
-    readImage(f, 180000).then(u => { S.draft.image=u; fillTasks(); }).catch(()=>toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
-  if (e.target.id === 'fImg' && e.target.files[0]) { const f=e.target.files[0];
-    if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
-    readImage(f).then(u => { S.formImg=u; setThumb(); }).catch(()=>toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
-  const m = e.target.dataset && e.target.dataset.move;
-  if (m) guard(async()=>{ await S.db.doc('players/'+m).update({ sector:e.target.value }); toast('Setor atualizado.'); });
+  const t = e.target, d = t.dataset || {};
+  if (d.tsel) { if (t.checked) S.tSel.add(d.tsel); else S.tSel.delete(d.tsel); return selCount(); }
+  if (t.id === 'sImg' && t.files[0]) { const f = t.files[0]; if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
+    readImage(f, 180000).then(u => { S.draft.image = u; fillTasks(); }).catch(() => toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
+  if (t.id === 'fImg' && t.files[0]) { const f = t.files[0]; if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
+    readImage(f).then(u => { S.formImg = u; setThumb(); }).catch(() => toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
+  if (d.move) { const p = S.players[d.move]; guard(async () => { await updateDoc(doc(fdb, 'players', d.move), { sector:t.value }); audit('Mudou colaborador de time', `${nm(d.move)}: ${secName(p && p.sector)} → ${secName(t.value)}`); toast('Time atualizado.'); }); }
 });
-document.addEventListener('input', e => { if (e.target.id==='tFind') { S.tFind = e.target.value; fillPeoplePick(); } if (e.target.id==='sNote') S.draft.note=e.target.value; if (e.target.dataset && e.target.dataset.reason) S.reasons[e.target.dataset.reason]=e.target.value; });
+document.addEventListener('input', e => {
+  const t = e.target, d = t.dataset || {};
+  if (t.id === 'tFind') { S.tFind = t.value; fillPeoplePick(); }
+  if (t.id === 'pFind') { S.pFind = t.value; fillColab(); }
+  if (t.id === 'sNote') S.draft.note = t.value;
+  if (t.id === 'muralText') S.muralDraft = t.value;
+  if (d.reason) S.reasons[d.reason] = t.value;
+  if (d.obs) S.obs[d.obs] = t.value;
+  if (d.cname) S.names[d.cname] = t.value;
+});
+document.addEventListener('keydown', e => {
+  if ((e.target.id === 'sImgBtn' || e.target.id === 'fImgBtn') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); $(e.target.id === 'sImgBtn' ? '#sImg' : '#fImg').click(); }
+});
 
-document.addEventListener('keydown', e => { if ((e.target.id==='sImgBtn') && (e.key==='Enter'||e.key===' ')) { e.preventDefault(); return $('#sImg').click(); }
-  if (e.target.id==='fImgBtn' && (e.key==='Enter'||e.key===' ')) { e.preventDefault(); $('#fImg').click(); } });
 document.addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target;
   if (f.id === 'loginForm') return guard(async () => {
-    const em = $('#lEmail').value.trim(), pw = $('#lPass').value, mode = e.submitter?.dataset.mode || 'in';
+    const em = $('#lEmail').value.trim(), pw = $('#lPass').value, mode = (e.submitter && e.submitter.dataset.mode) || 'in';
     if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(dm => em.toLowerCase().endsWith('@' + dm.toLowerCase()))) return toast('Use seu e-mail corporativo (' + ALLOWED_EMAIL_DOMAINS.map(dm => '@' + dm).join(', ') + ').');
     try { if (mode === 'up') await createUserWithEmailAndPassword(auth, em, pw); else await signInWithEmailAndPassword(auth, em, pw); }
     catch(err) { toast(authMsg(err)); }
   });
-  if (f.id === 'subForm') return guard(async () => {
-    const t = S.tasks.find(x=>x.id===f.dataset.task), p = me(); if (!t || !p) return;
-    const note = S.draft.note.trim(), image = safeImg(S.draft.image);
-    if (t.proof && !note && !image) return toast('Anexe uma imagem ou descreva a comprovação.');
-    if (S.subs.some(x=>x.task===t.id && x.player===S.me && (x.status==='pendente' || (x.status==='aprovada' && !t.repeat)))) return toast('Você já enviou esta tarefa.');
-    const sid = t.repeat ? doc(collection(fdb,'submissions')).id : t.id + '_' + S.me;
-    if (image) await setDoc(doc(fdb,'proofs',sid), { image, player:S.me, at:now() });
-    await setDoc(doc(fdb,'submissions',sid), { task:t.id, taskTitle:t.title, reward:t.reward, player:S.me, sector:p.sector, note, hasImage:!!image, status:'pendente', at:now() });
-    S.openTask=null; S.draft={note:'',image:null}; fillTasks(); toast('Enviado! A supervisão vai conferir.');
-  });
-  if (f.id === 'taskForm') return guard(async () => {
-    const title=$('#tTitle').value.trim(), reward=parseInt($('#tReward').value,10);
-    if (!title || !(reward>0)) return toast('Informe a tarefa e uma recompensa maior que zero.');
-    let sector, audience;
-    if (S.tMode === 'pessoas') {
-      const ids = [...S.tSel].filter(id => S.players[id]);
-      if (!ids.length) return toast('Marque pelo menos um colaborador.');
-      const secs = [...new Set(ids.map(id => S.players[id].sector))];
-      sector = secs.length === 1 ? secs[0] : 'ambos'; audience = ids.map(id => 'uid:' + id);
-    } else { sector = $('#tSector').value; audience = sector === 'ambos' ? ['sec:fin','sec:chat'] : ['sec:' + sector]; }
-    const data={ title, desc:$('#tDesc').value.trim(), reward, sector, audience, proof:$('#tProof').checked, repeat:$('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
-    if (S.editingTask) { await S.db.doc('tasks/'+S.editingTask).update(data); toast('Tarefa atualizada.'); }
-    else { await S.db.collection('tasks').add({ ...data, createdAt:now() }); toast('Tarefa publicada.'); }
-    resetTaskForm();
-  });
-  if (f.id === 'joinForm') { const n=$('#jName').value.trim().replace(/\s+/g,' ');
+  if (f.id === 'joinForm') { const n = $('#jName').value.trim().replace(/\s+/g, ' ');
     if (n.length < 3) return toast('Digite seu nome.');
     if (!S.joinSector) return toast('Selecione seu setor.');
     return join(n, S.joinSector, $('#jSup').checked); }
+  if (f.id === 'subForm') return guard(async () => {
+    const t = S.tasks.find(x => x.id === f.dataset.task), p = me(); if (!t || !p) return;
+    if (isExpired(t)) return toast('O prazo desta tarefa já terminou.');
+    const note = S.draft.note.trim(), image = safeImg(S.draft.image);
+    if (t.proof && !note && !image) return toast('Anexe uma imagem ou descreva a comprovação.');
+    if (S.subs.some(x => x.task === t.id && x.player === S.me && (x.status === 'pendente' || (x.status === 'aprovada' && !t.repeat)))) return toast('Você já enviou esta tarefa.');
+    const sid = t.repeat ? doc(collection(fdb, 'submissions')).id : t.id + '_' + S.me;
+    if (image) await setDoc(doc(fdb, 'proofs', sid), { image, player:S.me, at:now() });
+    await setDoc(doc(fdb, 'submissions', sid), { task:t.id, taskTitle:t.title, reward:t.reward, player:S.me, sector:p.sector, note, hasImage:!!image, status:'pendente', at:now() });
+    S.openTask = null; S.draft = { note:'', image:null }; fillTasks(); toast('Enviado! A supervisão vai conferir.');
+  });
+  if (f.id === 'taskForm') return guard(async () => {
+    const title = $('#tTitle').value.trim(), reward = parseInt($('#tReward').value, 10), dl = $('#tDeadline').value;
+    if (!title || !(reward > 0)) return toast('Informe a tarefa e uma recompensa maior que zero.');
+    let deadlineAt = null;
+    if (dl) { const [y, m, dd] = dl.split('-').map(Number); deadlineAt = new Date(y, m - 1, dd, 23, 59, 59).getTime(); if (!S.editingTask && deadlineAt < now()) return toast('O prazo precisa ser hoje ou uma data futura.'); }
+    let sector, audience;
+    if (S.tMode === 'pessoas') {
+      const ids = [...S.tSel].filter(id => S.players[id] && !S.players[id].blocked);
+      if (!ids.length) return toast('Marque pelo menos um colaborador.');
+      const secs = [...new Set(ids.map(id => S.players[id].sector))];
+      sector = secs.length === 1 ? secs[0] : 'ambos'; audience = ids.map(id => 'uid:' + id);
+    } else { sector = $('#tSector').value; audience = sector === 'ambos' ? ['sec:fin', 'sec:chat'] : ['sec:' + sector]; }
+    const data = { title, desc:$('#tDesc').value.trim(), reward, sector, audience, deadlineAt, proof:$('#tProof').checked, repeat:$('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
+    if (S.editingTask) { await updateDoc(doc(fdb, 'tasks', S.editingTask), data); audit('Editou tarefa', title); toast('Tarefa atualizada.'); }
+    else { await addDoc(collection(fdb, 'tasks'), { ...data, createdAt:now() }); audit('Criou tarefa', `${title} · +${reward} · para ${S.tMode === 'pessoas' ? audience.length + ' pessoa(s)' : secName(sector)}`); toast('Tarefa publicada.'); }
+    resetTaskForm();
+  });
   if (f.id === 'itemForm') return guard(async () => {
-    const cost = parseInt($('#fCost').value,10), st = $('#fStock').value.trim();
-    const name = $('#fName').value.trim();
-    if (!name || !(cost>0)) return toast('Informe o nome e um custo maior que zero.');
-    const left = st===''?null:Math.max(0,parseInt(st,10)||0);
-    const data = { name, desc:$('#fDesc').value.trim(), emoji:$('#fEmoji').value.trim()||'🎁', cost, stock:left,
+    const cost = parseInt($('#fCost').value, 10), st = $('#fStock').value.trim(), name = $('#fName').value.trim();
+    if (!name || !(cost > 0)) return toast('Informe o nome e um custo maior que zero.');
+    const data = { name, desc:$('#fDesc').value.trim(), emoji:$('#fEmoji').value.trim() || '🎁', cost, stock:st === '' ? null : Math.max(0, parseInt(st, 10) || 0),
       sector:$('#fSector').value, active:$('#fActive').checked, image:safeImg(S.formImg), updatedAt:now(), updatedBy:S.me };
-    if (S.editing) { await S.db.doc('items/'+S.editing).update(data); toast('Prêmio atualizado na loja.'); }
-    else { await S.db.collection('items').add({ ...data, createdAt:now() }); toast('Prêmio adicionado à loja.'); }
+    if (S.editing) { await updateDoc(doc(fdb, 'items', S.editing), data); audit('Editou prêmio', `${name} · ${cost} moedas`); toast('Prêmio atualizado na loja.'); }
+    else { await addDoc(collection(fdb, 'items'), { ...data, createdAt:now() }); audit('Criou prêmio', `${name} · ${cost} moedas · ${secName(data.sector)}`); toast('Prêmio adicionado à loja.'); }
     resetForm();
   });
   if (f.id === 'coinForm') return guard(async () => {
-    const dir = +(e.submitter?.dataset.dir || 1), pid = $('#cTarget').value, amt = parseInt($('#cAmt').value,10), why = $('#cWhy').value.trim();
-    if (!pid || !(amt>0) || !why) return toast('Escolha o colaborador, a quantidade e o motivo.');
-    const real = await adjust(pid, dir*amt, why);
+    const dir = +((e.submitter && e.submitter.dataset.dir) || 1), pid = $('#cTarget').value, amt = parseInt($('#cAmt').value, 10), why = $('#cWhy').value.trim();
+    if (!pid || !(amt > 0) || !why) return toast('Escolha o colaborador, a quantidade e o motivo.');
+    const real = await adjust(pid, dir * amt, why);
     if (!real) return toast(`${nm(pid)} não tem saldo para debitar.`);
-    toast(`${real>0?'Creditados':'Debitados'} ${fmt(Math.abs(real))} Unicoins ${real>0?'para':'de'} ${nm(pid)}.`); $('#cAmt').value=''; $('#cWhy').value='';
+    audit(real > 0 ? 'Creditou moedas' : 'Debitou moedas', `${nm(pid)} · ${real > 0 ? '+' : ''}${real} · ${why}`);
+    toast(`${real > 0 ? 'Creditados' : 'Debitados'} ${fmt(Math.abs(real))} Unicoins ${real > 0 ? 'para' : 'de'} ${nm(pid)}.`); $('#cAmt').value = ''; $('#cWhy').value = '';
   });
   if (f.id === 'bulkForm') return guard(async () => {
-    const sec = $('#bSector').value, amt = parseInt($('#bAmt').value,10), why = $('#bWhy').value.trim();
-    if (!(amt>0) || !why) return toast('Informe a quantidade e o motivo.');
-    const ps = Object.values(S.players).filter(p=>p.sector===sec);
+    const sec = $('#bSector').value, amt = parseInt($('#bAmt').value, 10), why = $('#bWhy').value.trim();
+    if (!(amt > 0) || !why) return toast('Informe a quantidade e o motivo.');
+    const ps = activePlayers().filter(p => p.sector === sec && !supIds().includes(p.id));
     if (!ps.length) return toast('Ninguém deste setor entrou na loja ainda.');
     await bulkCredit(ps.map(p => p.id), amt, why);
+    audit('Creditou setor inteiro', `${SECT[sec].name} · +${amt} para ${ps.length} pessoas · ${why}`);
     toast(`${fmt(amt)} Unicoins creditados para ${ps.length} pessoas do ${SECT[sec].name}.`); f.reset();
   });
 });
