@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Unicoins — Balcão de prêmios</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1B5FD1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Unicoins">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%AA%99%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +18,8 @@
 :root{
   --bg:#EAF0F7; --surface:#FFFFFF; --surface2:#F3F6FB; --ink:#10233A; --muted:#5B6B80; --line:#D3DCE8;
   --blue:#1B5FD1; --blue-ink:#FFFFFF; --gold:#E8B21E; --gold-deep:#9A6C00;
-  --fin:#0F7F73; --fin-soft:#DDF2EF; --chat:#5B3FC4; --chat-soft:#E9E4FB; --mat:#B4530A; --mat-soft:#FCE9D9; --ra:#B42346; --ra-soft:#FBE3E9;
+  --p0:#0F7F73; --p0s:#DDF2EF; --p1:#5B3FC4; --p1s:#E9E4FB; --p2:#B4530A; --p2s:#FCE9D9; --p3:#B42346; --p3s:#FBE3E9;
+  --p4:#1B5FD1; --p4s:#DDE8FB; --p5:#2E7D32; --p5s:#DFF1E0; --p6:#A3218F; --p6s:#F7E1F3; --p7:#475569; --p7s:#E5E9EF;
   --ok:#1E8A4C; --bad:#C2372F; --shadow:0 1px 0 rgba(16,35,58,.06),0 6px 18px -10px rgba(16,35,58,.25);
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   color-scheme:light;
@@ -20,17 +27,20 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#0B1524; --surface:#132238; --surface2:#182A44; --ink:#E7EEF7; --muted:#9AAAC0; --line:#24395A;
-    --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550; --mat:#F0A35E; --mat-soft:#3A2614; --ra:#F2839E; --ra-soft:#3D1622;
+    --blue:#5B93F0; --blue-ink:#071224; --p0:#3BC2B0; --p0s:#12343A; --p1:#A18CF2; --p1s:#272550; --p2:#F0A35E; --p2s:#3A2614; --p3:#F2839E; --p3s:#3D1622;
+    --p4:#7FA8F5; --p4s:#16284A; --p5:#7BCB80; --p5s:#17321A; --p6:#E58AD6; --p6s:#36173A; --p7:#A7B4C6; --p7s:#1E2A3A;
     --ok:#4CC27F; --bad:#F07067; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.7); color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0B1524; --surface:#132238; --surface2:#182A44; --ink:#E7EEF7; --muted:#9AAAC0; --line:#24395A;
-  --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550; --mat:#F0A35E; --mat-soft:#3A2614; --ra:#F2839E; --ra-soft:#3D1622;
+  --blue:#5B93F0; --blue-ink:#071224; --p0:#3BC2B0; --p0s:#12343A; --p1:#A18CF2; --p1s:#272550; --p2:#F0A35E; --p2s:#3A2614; --p3:#F2839E; --p3s:#3D1622;
+    --p4:#7FA8F5; --p4s:#16284A; --p5:#7BCB80; --p5s:#17321A; --p6:#E58AD6; --p6s:#36173A; --p7:#A7B4C6; --p7s:#1E2A3A;
   --ok:#4CC27F; --bad:#F07067; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.7); color-scheme:dark;
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100%}
 h1,h2,h3{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;line-height:1.1;margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -63,10 +73,23 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .hero .amount{font:800 clamp(48px,9vw,84px)/.95 "Bricolage Grotesque",sans-serif;letter-spacing:-.03em}
 .hero .label{color:var(--muted);margin-top:6px}
 .sector-tag{display:inline-block;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px}
-.sector-tag.fin{background:var(--fin-soft);color:var(--fin)}
-.sector-tag.chat{background:var(--chat-soft);color:var(--chat)}
-.sector-tag.mat{background:var(--mat-soft);color:var(--mat)}
-.sector-tag.ra{background:var(--ra-soft);color:var(--ra)}
+.sector-tag.team{background:var(--cs);color:var(--c)}
+.choose button.team:hover,.choose button.team:focus-visible{border-color:var(--c)}
+.choose button.team[aria-pressed="true"]{border-color:var(--c);background:var(--cs);color:var(--c)}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatch{width:26px;height:26px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ink)}
+.bar{height:10px;border-radius:999px;background:var(--surface2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--gold)}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.badge{background:var(--surface2);border-radius:14px;padding:12px;text-align:center}
+.badge .ic{font-size:30px;line-height:1}
+.badge b{display:block;font-size:14px;margin-top:6px}
+.badge span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.badge.locked{opacity:.45;filter:grayscale(1)}
+.teamrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.teamrow:last-child{border-bottom:0}
+.wish{background:var(--surface2);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:14px}
 .sector-tag.ambos{background:var(--surface2);color:var(--muted)}
 @media (max-width:560px){.hero{grid-template-columns:1fr;text-align:left}.coin.big{width:84px;height:84px;font-size:44px}}
 
@@ -99,7 +122,8 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 /* Panels & lists */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
 .cols{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
-@media (max-width:820px){.cols{grid-template-columns:1fr}}
+.cols.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:820px){.cols,.cols.two{grid-template-columns:1fr}}
 .panel h3{font-size:18px;margin-bottom:12px}
 .f{display:block;font-size:14px;font-weight:600;margin:10px 0 4px}
 .in{width:100%;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 11px}
@@ -139,16 +163,8 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .notice{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px;text-align:center;max-width:560px;margin:40px auto}
 .choose{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
 .choose button{border:2px solid var(--line);background:var(--surface2);border-radius:14px;padding:22px 12px;cursor:pointer;font:700 18px "Bricolage Grotesque",sans-serif}
-.choose button.fin:hover,.choose button.fin:focus-visible{border-color:var(--fin)}
-.choose button.mat:hover,.choose button.mat:focus-visible{border-color:var(--mat)}
-.choose button.ra:hover,.choose button.ra:focus-visible{border-color:var(--ra)}
-.choose button.chat:hover,.choose button.chat:focus-visible{border-color:var(--chat)}
 @media (max-width:480px){.choose{grid-template-columns:1fr}}
 .joinform{text-align:left;margin-top:18px}
-.choose button[aria-pressed="true"].fin{border-color:var(--fin);background:var(--fin-soft);color:var(--fin)}
-.choose button[aria-pressed="true"].mat{border-color:var(--mat);background:var(--mat-soft);color:var(--mat)}
-.choose button[aria-pressed="true"].ra{border-color:var(--ra);background:var(--ra-soft);color:var(--ra)}
-.choose button[aria-pressed="true"].chat{border-color:var(--chat);background:var(--chat-soft);color:var(--chat)}
 .ticket .pic{aspect-ratio:16/10;background:var(--surface2);overflow:hidden}
 .ticket .pic img{width:100%;height:100%;object-fit:cover;display:block}
 .imgpick{display:flex;gap:12px;align-items:center}
@@ -193,6 +209,7 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
   <header class="top">
     <div class="brand"><span class="coin" aria-hidden="true">U</span><h1>Unicoins</h1></div>
     <span class="role" id="role">Carregando…</span>
+    <button class="btn ghost sm" id="installBtn" hidden>Instalar app</button>
     <button class="btn ghost sm" id="viewBtn" hidden>Prévia do colaborador</button>
     <button class="btn ghost sm" id="logout" hidden>Sair</button>
     <nav class="tabs" id="tabs" aria-label="Seções"></nav>
@@ -225,26 +242,35 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, runTransaction, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const SECT = { fin:{ name:'Financeiro' }, chat:{ name:'Chat Uniasselvi' }, mat:{ name:'Matrícula' }, ra:{ name:'Reclame Aqui' }, ambos:{ name:'Todos os setores' } };
-const SECS = ['fin', 'chat', 'mat', 'ra'];
 const NSUP = 5;
-const secOptions = () => SECS.map(k => `<option value="${k}">${SECT[k].name}</option>`).join('');
+const PALETTE = 8;
+const DEFAULT_TEAMS = {
+  fin:{ name:'Financeiro', color:0, order:0, active:true },
+  chat:{ name:'Chat Uniasselvi', color:1, order:1, active:true },
+  mat:{ name:'Matrícula', color:2, order:2, active:true },
+  ra:{ name:'Reclame Aqui', color:3, order:3, active:true }
+};
 const RED_LAB = { pendente:'Aguardando', separacao:'Em separação', entregue:'Entregue', recusada:'Recusada · estornado' };
 const SUB_LAB = { pendente:'Em análise', aprovada:'Aprovada', recusada:'Recusada' };
+const KUDO_LAB = { pendente:'Aguardando a supervisão', aprovado:'Aprovado', recusado:'Recusado' };
+const RECUR_LAB = { semanal:'Toda semana', mensal:'Todo mês' };
 
 const S = {};
 function resetState(){
   Object.assign(S, {
-    me:null, email:'', owner:false, mine:null, gotCfg:false, gotMine:false,
-    cfg:{ supervisors:[null,null,null,null], seasonKey:'', seasonName:'', seasonStart:0 }, notice:null, seasons:[],
-    players:{}, items:[], tasks:[], tasksSec:[], tasksMine:[], reds:[], redsOpen:[], redsRecent:[], ledger:[],
+    me:null, email:'', owner:false, mine:null, gotCfg:false, gotMine:false, invite:undefined, autoJoining:false,
+    cfg:{ supervisors:Array(NSUP).fill(null), supScope:{}, seasonKey:'', seasonName:'', seasonStart:0, inviteOnly:false, kudosBonus:10 },
+    teams:DEFAULT_TEAMS, gotTeams:false, notice:null, seasons:[], teamScores:null,
+    players:{}, items:[], tasks:[], tasksSec:[], tasksAll:[], tasksMine:[], reds:[], redsOpen:[], redsRecent:[], ledger:[],
     subs:[], subsPend:[], subsRecent:[], audit:[], proofs:{}, proofLoading:new Set(),
+    kudos:[], kudosPend:[], kudosRecent:[], kudosFrom:[], kudosTo:[], invites:[],
     tab:'loja', sub:'tarefas', viewAs:null, preview:null,
     editing:null, formImg:null, editingTask:null, tMode:'setor', tSel:new Set(), tFind:'',
-    openTask:null, draft:{ note:'', image:null }, reasons:{}, obs:{}, names:{}, muralDraft:null,
-    confirmId:null, confirmDel:null, confirmTDel:null, confirmRp:null, confirmBlock:null,
-    progressTask:null, progressSubs:[], kpi:null, kpiLoading:false, pFind:'',
-    newItems:new Set(), newTasks:new Set(), busy:false, loaded:false, emailFixing:false, joinSector:null
+    openTask:null, draft:{ note:'', image:null }, reasons:{}, obs:{}, names:{}, muralDraft:null, bonus:{},
+    confirmId:null, confirmDel:null, confirmTDel:null, confirmRp:null, confirmBlock:null, confirmInv:null,
+    progressTask:null, progressSubs:[], kpi:null, kpiLoading:false, pFind:'', selSubs:new Set(),
+    newItems:new Set(), newTasks:new Set(), busy:false, loaded:false, emailFixing:false, joinSector:null,
+    newTeamColor:4, teamDraft:{}, restore:null, kudoDraft:{ to:'', msg:'' }
   });
 }
 resetState();
@@ -264,21 +290,60 @@ const nm = id => (S.players[id] && S.players[id].name) || (ADMIN_UIDS.includes(i
 const safeImg = v => typeof v === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) ? v : null;
 const bal = id => Number((S.players[id] && S.players[id].balance) || 0);
 const earned = id => Number((S.players[id] && S.players[id].earned) || 0);
-const isEarnKind = k => k === 'credit' || k === 'bulk' || k === 'task';
+const isEarnKind = k => k === 'credit' || k === 'bulk' || k === 'task' || k === 'kudos';
 const byAtDesc = (a, b) => (b.at || 0) - (a.at || 0);
+const supIds = () => S.cfg.supervisors.filter(Boolean);
+const lowerEmail = e => String(e || '').trim().toLowerCase();
 let toastT;
-function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3600); }
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3800); }
+
+/* ---------- Times ---------- */
+const teamKeys = () => Object.keys(S.teams).sort((a, b) => (S.teams[a].order || 0) - (S.teams[b].order || 0));
+const activeTeams = () => teamKeys().filter(k => S.teams[k].active !== false);
+const tName = k => k === 'ambos' ? 'Todos os times' : (S.teams[k] || {}).name || 'Time removido';
+const tTag = k => `<span class="sector-tag ${k === 'ambos' ? 'ambos' : 'team t-' + esc(k)}">${esc(tName(k))}</span>`;
+const teamOptions = (keys, sel) => keys.map(k => `<option value="${esc(k)}" ${k === sel ? 'selected' : ''}>${esc(tName(k))}</option>`).join('');
+function applyTeamStyles(){
+  let el = document.getElementById('teamStyles');
+  if (!el) { el = document.createElement('style'); el.id = 'teamStyles'; document.head.appendChild(el); }
+  el.textContent = teamKeys().filter(k => /^[a-z0-9_]+$/i.test(k)).map(k => { const c = Math.abs(parseInt(S.teams[k].color, 10) || 0) % PALETTE; return `.t-${k}{--c:var(--p${c});--cs:var(--p${c}s)}`; }).join('\n');
+}
+applyTeamStyles();
+
+/* ---------- Escopo da supervisão ---------- */
+const myScope = () => S.owner ? 'all' : ((S.cfg.supScope || {})[S.me] || 'all');
+const inScope = sec => myScope() === 'all' || sec === myScope();
+const canEdit = sec => myScope() === 'all' || (sec !== 'ambos' && sec === myScope());
+const scopeTeams = () => myScope() === 'all' ? activeTeams() : [myScope()];
+
 function viewSector(){
   if (S.viewAs) return S.viewAs;
-  if (isSup()) return S.preview || (me() && me().sector) || 'fin';
-  return me() ? me().sector : 'fin';
+  if (isSup()) return S.preview || (myScope() !== 'all' ? myScope() : (me() && me().sector)) || activeTeams()[0] || 'fin';
+  return me() ? me().sector : activeTeams()[0];
 }
 const seasonLabel = () => S.cfg.seasonName || 'Temporada atual';
+
+/* ---------- Períodos (tarefas recorrentes, horário de Brasília) ---------- */
+const BRT = 3 * 3600e3, DAY = 864e5;
+function periodOf(recur, ms = now()){
+  const t = ms - BRT;
+  if (recur === 'semanal') return 'W' + Math.floor((t - 4 * DAY) / (7 * DAY));
+  if (recur === 'mensal') { const d = new Date(t); return 'M' + d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1); }
+  return '';
+}
+const weekOf = ms => periodOf('semanal', ms);
 
 /* ---------- Novidades (marcador "Nova") ---------- */
 const seenKey = () => 'unicoins_seen_' + S.me;
 function getSeen(){ try { const v = JSON.parse(localStorage.getItem(seenKey()) || 'null'); if (v) return v; } catch(e){} const v = { items:now(), tasks:now() }; try { localStorage.setItem(seenKey(), JSON.stringify(v)); } catch(e){} return v; }
 function setSeen(kind){ const v = getSeen(); v[kind] = now(); try { localStorage.setItem(seenKey(), JSON.stringify(v)); } catch(e){} }
+
+/* ---------- Instalar como aplicativo ---------- */
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; const b = $('#installBtn'); if (b) b.hidden = false; });
+addEventListener('appinstalled', () => { installEvt = null; const b = $('#installBtn'); if (b) b.hidden = true; toast('Unicoins instalado!'); });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => {});
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
 
 /* ---------- Firebase ---------- */
 const configured = !String(FIREBASE_CONFIG.apiKey).startsWith('COLE');
@@ -286,13 +351,27 @@ let fdb = null, auth = null;
 let base = [], live = [], liveKey = '', progUnsub = null;
 function stopAll(){ base.forEach(u => u()); live.forEach(u => u()); if (progUnsub) progUnsub(); base = []; live = []; liveKey = ''; progUnsub = null; }
 
+function cfgFrom(d){
+  const raw = Array.isArray(d.supervisors) ? d.supervisors : [];
+  const sv = raw.filter(Boolean).slice(0, NSUP); while (sv.length < NSUP) sv.push(null);
+  return { supervisors:sv, supScope:d.supScope || {}, seasonKey:d.seasonKey || '', seasonName:d.seasonName || '', seasonStart:d.seasonStart || 0, inviteOnly:!!d.inviteOnly, kudosBonus:Number(d.kudosBonus) > 0 ? Number(d.kudosBonus) : 10, _raw:raw };
+}
+function cfgWrite(patch){
+  const c = S.cfg;
+  return setDoc(doc(fdb, 'config', 'main'), { supervisors:c.supervisors, supScope:c.supScope || {}, seasonKey:c.seasonKey || 'S1', seasonName:c.seasonName || 'Temporada 1', seasonStart:c.seasonStart || now(), inviteOnly:!!c.inviteOnly, kudosBonus:c.kudosBonus || 10, ...patch });
+}
+function teamsWrite(teams){
+  const activeKeys = Object.keys(teams).filter(k => teams[k].active !== false);
+  return setDoc(doc(fdb, 'config', 'teams'), { teams, activeKeys });
+}
+
 if (!configured) {
   notice('Falta configurar o Firebase. Preencha FIREBASE_CONFIG no início do arquivo index.html.');
 } else {
   const app = initializeApp(FIREBASE_CONFIG);
   auth = getAuth(app); fdb = getFirestore(app);
   onAuthStateChanged(auth, u => {
-    stopAll(); resetState();
+    stopAll(); resetState(); applyTeamStyles();
     $('#logout').hidden = !u; $('#viewBtn').hidden = true;
     if (!u) return showLogin();
     if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(d => (u.email || '').toLowerCase().endsWith('@' + d.toLowerCase()))) {
@@ -303,15 +382,19 @@ if (!configured) {
     $('#role').textContent = 'Carregando…'; $('#main').innerHTML = '<p class="hint">Abrindo o balcão de prêmios…</p>';
     base.push(onSnapshot(doc(fdb, 'config', 'main'), s => {
       const d = s.exists() ? s.data() : {};
-      const raw = Array.isArray(d.supervisors) ? d.supervisors : [];
-      const sv = raw.filter(Boolean).slice(0, NSUP); while (sv.length < NSUP) sv.push(null);
-      S.cfg = { supervisors:sv, seasonKey:d.seasonKey || '', seasonName:d.seasonName || '', seasonStart:d.seasonStart || 0 };
-      if (S.owner && (!d.seasonKey || raw.length !== NSUP || raw.some((x, i) => x !== sv[i]))) {
-        setDoc(doc(fdb, 'config', 'main'), { supervisors:sv, seasonKey:d.seasonKey || 'S1', seasonName:d.seasonName || 'Temporada 1', seasonStart:d.seasonStart || now() }).catch(e => console.error(e));
-      }
+      S.cfg = cfgFrom(d);
+      const raw = S.cfg._raw;
+      if (S.owner && (!d.seasonKey || !d.supScope || raw.length !== NSUP || raw.some((x, i) => x !== S.cfg.supervisors[i]))) cfgWrite({}).catch(e => console.error(e));
       S.gotCfg = true; resub(); changed();
     }, onErr));
+    base.push(onSnapshot(doc(fdb, 'config', 'teams'), s => {
+      const d = s.exists() ? s.data() : null;
+      S.teams = d && d.teams && Object.keys(d.teams).length ? d.teams : DEFAULT_TEAMS;
+      if (S.owner && !d) teamsWrite(DEFAULT_TEAMS).catch(e => console.error(e));
+      S.gotTeams = true; applyTeamStyles(); lastShape = ''; changed();
+    }, e => console.error('teams', e)));
     base.push(onSnapshot(doc(fdb, 'config', 'notice'), s => { S.notice = s.exists() ? s.data() : null; changed(); }, e => console.error(e)));
+    base.push(onSnapshot(doc(fdb, 'config', 'teamScores'), s => { S.teamScores = s.exists() ? s.data() : null; changed(); }, e => console.error(e)));
     base.push(onSnapshot(query(collection(fdb, 'seasons'), orderBy('endedAt', 'desc'), limit(12)), q => { S.seasons = q.docs.map(d => ({ id:d.id, ...d.data() })); changed(); }, e => console.error(e)));
     base.push(onSnapshot(doc(fdb, 'players', S.me), s => {
       S.mine = s.exists() ? { id:s.id, ...s.data() } : null;
@@ -319,7 +402,11 @@ if (!configured) {
         S.players[S.me] = S.mine;
         if (S.email && S.mine.email !== S.email && !S.emailFixing) { S.emailFixing = true; updateDoc(doc(fdb, 'players', S.me), { email:S.email }).catch(() => {}).finally(() => S.emailFixing = false); }
       }
-      S.gotMine = true; resub(); changed();
+      S.gotMine = true;
+      if (!S.mine && S.invite === undefined && S.email) {
+        getDoc(doc(fdb, 'invites', lowerEmail(S.email))).then(x => { S.invite = x.exists() ? x.data() : null; }).catch(() => { S.invite = null; }).finally(() => { resub(); lastShape = ''; changed(); });
+      }
+      resub(); changed();
     }, onErr));
   });
 }
@@ -330,20 +417,22 @@ function onErr(e){
   else toast('Falha de conexão com o banco. Verifique a internet e recarregue a página.');
 }
 
-const list = (q, fn) => live.push(onSnapshot(q, snap => { fn(snap.docs.map(d => ({ id:d.id, ...d.data() }))); changed(); }, onErr));
-function mergeSubs(){ const m = new Map(); [...S.subsPend, ...S.subsRecent].forEach(x => m.set(x.id, x)); S.subs = [...m.values()].sort(byAtDesc); }
-function mergeReds(){ const m = new Map(); [...S.redsOpen, ...S.redsRecent].forEach(x => m.set(x.id, x)); S.reds = [...m.values()].sort(byAtDesc); }
-function mergeTasks(){ const m = new Map(); [...S.tasksSec, ...S.tasksMine].forEach(t => m.set(t.id, t)); S.tasks = [...m.values()]; }
+const list = (q, fn, soft) => live.push(onSnapshot(q, snap => { fn(snap.docs.map(d => ({ id:d.id, ...d.data() }))); changed(); }, soft ? (e => console.error(e)) : onErr));
+const mergeBy = (...arrs) => { const m = new Map(); arrs.flat().forEach(x => m.set(x.id, x)); return [...m.values()].sort(byAtDesc); };
+function mergeSubs(){ S.subs = mergeBy(S.subsPend, S.subsRecent); }
+function mergeReds(){ S.reds = mergeBy(S.redsOpen, S.redsRecent); }
+function mergeTasks(){ const m = new Map(); [...S.tasksSec, ...S.tasksAll, ...S.tasksMine].forEach(t => m.set(t.id, t)); S.tasks = [...m.values()]; }
+function mergeKudos(){ S.kudos = mergeBy(S.kudosPend, S.kudosRecent, S.kudosFrom, S.kudosTo); }
 
 function resub(){
   if (!S.gotCfg || !S.gotMine) return;
   const key = [isSup() ? 'sup' : 'col', S.mine ? S.mine.sector : '-', isBlocked() ? 'b' : '', S.owner ? 'o' : ''].join('|');
   if (key === liveKey) return;
   live.forEach(u => u()); live = []; liveKey = key; closeProgress();
-  Object.assign(S, { players:S.mine ? { [S.me]:S.mine } : {}, items:[], tasks:[], tasksSec:[], tasksMine:[], reds:[], redsOpen:[], redsRecent:[], ledger:[], subs:[], subsPend:[], subsRecent:[], audit:[] });
+  Object.assign(S, { players:S.mine ? { [S.me]:S.mine } : {}, items:[], tasks:[], tasksSec:[], tasksAll:[], tasksMine:[], reds:[], redsOpen:[], redsRecent:[], ledger:[], subs:[], subsPend:[], subsRecent:[], audit:[], kudos:[], kudosPend:[], kudosRecent:[], kudosFrom:[], kudosTo:[], invites:[] });
   const C = n => collection(fdb, n);
   if (isSup()) {
-    list(C('players'), a => { const o = {}; a.forEach(p => o[p.id] = p); S.players = o; });
+    list(C('players'), a => { const o = {}; a.forEach(p => o[p.id] = p); S.players = o; scheduleTeamScores(); });
     list(C('items'), a => S.items = a);
     list(C('tasks'), a => { S.tasks = a; migrateTasks(); });
     list(query(C('redemptions'), where('status', 'in', ['pendente', 'separacao'])), a => { S.redsOpen = a; mergeReds(); });
@@ -351,36 +440,65 @@ function resub(){
     list(query(C('ledger'), orderBy('at', 'desc'), limit(150)), a => S.ledger = a);
     list(query(C('submissions'), where('status', '==', 'pendente')), a => { S.subsPend = a; mergeSubs(); });
     list(query(C('submissions'), orderBy('at', 'desc'), limit(60)), a => { S.subsRecent = a; mergeSubs(); });
-    if (S.owner) live.push(onSnapshot(query(C('audit'), orderBy('at', 'desc'), limit(150)), q => { S.audit = q.docs.map(d => ({ id:d.id, ...d.data() })); changed(); }, e => console.error('audit', e)));
+    list(query(C('kudos'), where('status', '==', 'pendente')), a => { S.kudosPend = a; mergeKudos(); }, true);
+    list(query(C('kudos'), orderBy('at', 'desc'), limit(60)), a => { S.kudosRecent = a; mergeKudos(); }, true);
+    if (S.me && S.mine) list(query(C('kudos'), where('from', '==', S.me)), a => { S.kudosFrom = a; mergeKudos(); }, true);
+    if (S.owner) {
+      list(query(C('audit'), orderBy('at', 'desc'), limit(150)), a => S.audit = a, true);
+      list(C('invites'), a => S.invites = a.sort((x, y) => String(x.name).localeCompare(String(y.name))), true);
+    }
   } else if (S.mine && !isBlocked()) {
     const sec = S.mine.sector;
     list(query(C('players'), where('sector', '==', sec)), a => { const o = {}; a.forEach(p => o[p.id] = p); o[S.me] = S.mine; S.players = o; });
     list(query(C('items'), where('sector', 'in', ['ambos', sec])), a => S.items = a);
     list(query(C('tasks'), where('audience', 'array-contains', 'sec:' + sec)), a => { S.tasksSec = a; mergeTasks(); });
+    list(query(C('tasks'), where('audience', 'array-contains', 'sec:all')), a => { S.tasksAll = a; mergeTasks(); });
     list(query(C('tasks'), where('audience', 'array-contains', 'uid:' + S.me)), a => { S.tasksMine = a; mergeTasks(); });
     list(query(C('redemptions'), where('player', '==', S.me)), a => S.reds = a.sort(byAtDesc));
     list(query(C('ledger'), where('player', '==', S.me)), a => S.ledger = a.sort(byAtDesc));
     list(query(C('submissions'), where('player', '==', S.me)), a => { S.subsRecent = a; mergeSubs(); });
+    list(query(C('kudos'), where('from', '==', S.me)), a => { S.kudosFrom = a; mergeKudos(); }, true);
+    list(query(C('kudos'), where('to', '==', S.me), where('status', '==', 'aprovado')), a => { S.kudosTo = a; mergeKudos(); }, true);
   }
   S.loaded = true; build();
 }
 
 let tasksMigrated = false;
 function migrateTasks(){
-  if (tasksMigrated || !isSup()) return; tasksMigrated = true;
-  S.tasks.filter(t => !Array.isArray(t.audience) || (t.sector === 'ambos' && !isIndividual(t) && SECS.some(k => !t.audience.includes('sec:' + k)))).forEach(t => updateDoc(doc(fdb, 'tasks', t.id), { audience:audOf(t) }).catch(() => { tasksMigrated = false; }));
+  if (tasksMigrated || !S.owner) return; tasksMigrated = true;
+  S.tasks.filter(t => !Array.isArray(t.audience) || (t.sector === 'ambos' && !t.audience.some(a => a.startsWith('uid:')) && !t.audience.includes('sec:all')))
+    .forEach(t => updateDoc(doc(fdb, 'tasks', t.id), { audience:audOf(t) }).catch(() => { tasksMigrated = false; }));
 }
+
+/* ---------- Placar dos times (calculado pela supervisão, lido por todos) ---------- */
+function calcTeamScores(){
+  const sups = supIds(), out = {};
+  Object.values(S.players).forEach(p => {
+    if (p.blocked || ADMIN_UIDS.includes(p.id) || sups.includes(p.id) || !p.sector) return;
+    const o = out[p.sector] || (out[p.sector] = { total:0, members:0 });
+    o.total += Number(p.earned || 0); o.members += 1;
+  });
+  return out;
+}
+let tsTimer = null;
+function scheduleTeamScores(){
+  if (!isSup()) return;
+  clearTimeout(tsTimer);
+  tsTimer = setTimeout(() => {
+    const scores = calcTeamScores(), cur = S.teamScores;
+    if (cur && cur.season === S.cfg.seasonKey && JSON.stringify(cur.scores || {}) === JSON.stringify(scores)) return;
+    setDoc(doc(fdb, 'config', 'teamScores'), { scores, season:S.cfg.seasonKey || '', at:now() }).catch(e => console.error('teamScores', e));
+  }, 1500);
+}
+const teamScoresNow = () => isSup() ? calcTeamScores() : ((S.teamScores && S.teamScores.scores) || {});
 
 /* ---------- Registro de ações da supervisão ---------- */
 function audit(action, detail){
   if (!isSup() || !fdb) return;
   addDoc(collection(fdb, 'audit'), { by:S.me, byName:nm(S.me), action, detail:String(detail || '').slice(0, 300), at:now() }).catch(e => console.error(e));
 }
-function cfgWrite(patch){
-  return setDoc(doc(fdb, 'config', 'main'), { supervisors:S.cfg.supervisors, seasonKey:S.cfg.seasonKey || 'S1', seasonName:S.cfg.seasonName || 'Temporada 1', seasonStart:S.cfg.seasonStart || now(), ...patch });
-}
 
-function notice(msg){ $('#role').textContent = 'Unicoins'; $('#tabs').innerHTML = ''; $('#main').innerHTML = `<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">${esc(msg)}</h2></div>`; }
+function notice(msg, sub){ $('#role').textContent = 'Unicoins'; $('#tabs').innerHTML = ''; $('#main').innerHTML = `<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">${esc(msg)}</h2>${sub ? `<p class="hint">${esc(sub)}</p>` : ''}</div>`; }
 function setupBanner(){
   const b = $('#setupBanner');
   b.innerHTML = ADMIN_UIDS.some(x => x.startsWith('COLE')) && S.me ? `<div class="setup"><b>Configuração inicial:</b> o UID desta conta é <code>${esc(S.me)}</code> <button class="btn ghost sm" id="copyUid">Copiar</button><br>Se esta é a conta do administrador, cole o UID em <code>ADMIN_UIDS</code> no index.html e no arquivo <code>firestore.rules</code>.</div>` : '';
@@ -410,14 +528,20 @@ function showLogin(msg){
   if (msg) toast(msg);
 }
 
-/* ---------- Tarefas: público e prazo ---------- */
-const audOf = t => Array.isArray(t.audience) && !(t.sector === 'ambos' && !t.audience.some(a => a.startsWith('uid:'))) ? t.audience : (t.sector === 'ambos' ? SECS.map(k => 'sec:' + k) : ['sec:' + t.sector]);
+/* ---------- Tarefas: público, prazo e recorrência ---------- */
+function audOf(t){
+  const a = Array.isArray(t.audience) ? t.audience : null;
+  if (a && a.some(x => x.startsWith('uid:'))) return a;
+  if (t.sector === 'ambos') return ['sec:all'];
+  return a || ['sec:' + t.sector];
+}
 const isIndividual = t => audOf(t).some(a => a.startsWith('uid:'));
 const isExpired = t => !!t.deadlineAt && now() > t.deadlineAt;
-const supIds = () => S.cfg.supervisors.filter(Boolean);
+const isRecurring = t => t.recur === 'semanal' || t.recur === 'mensal';
+const curPeriod = t => isRecurring(t) ? periodOf(t.recur) : '';
 function visibleFor(t, sector){
   const a = audOf(t);
-  if (a.includes('sec:' + sector)) return true;
+  if (a.includes('sec:all') || a.includes('sec:' + sector)) return true;
   if (S.viewAs) return false;
   const p = me();
   if (p && p.sector === sector && a.includes('uid:' + S.me)) return true;
@@ -425,25 +549,28 @@ function visibleFor(t, sector){
 }
 function audLabel(t){
   const a = audOf(t);
-  if (!isIndividual(t)) return a.length > 1 ? 'Todos os setores' : (SECT[a[0].slice(4)] || {}).name || '';
+  if (!isIndividual(t)) return a.includes('sec:all') ? 'Todos os times' : tName(a[0].slice(4));
   const names = a.filter(x => x.startsWith('uid:')).map(x => nm(x.slice(4)));
   return names.length > 3 ? names.slice(0, 3).join(', ') + ' e mais ' + (names.length - 3) : names.join(', ');
 }
 function audiencePlayers(t){
   const a = audOf(t), sups = supIds();
-  return Object.values(S.players).filter(p => !p.blocked && !ADMIN_UIDS.includes(p.id) && !sups.includes(p.id) && (a.includes('sec:' + p.sector) || a.includes('uid:' + p.id)))
+  return Object.values(S.players).filter(p => !p.blocked && !ADMIN_UIDS.includes(p.id) && !sups.includes(p.id) && (a.includes('sec:all') || a.includes('sec:' + p.sector) || a.includes('uid:' + p.id)))
     .sort((x, y) => nm(x.id).localeCompare(nm(y.id)));
 }
+const mySubsFor = t => S.subs.filter(x => x.task === t.id && x.player === S.me && (!isRecurring(t) || x.period === curPeriod(t)));
+const recurNote = t => t.recur === 'semanal' ? 'reabre toda segunda-feira' : t.recur === 'mensal' ? 'reabre todo dia 1º' : '';
+const recurDone = t => t.recur === 'semanal' ? 'Feita esta semana' : t.recur === 'mensal' ? 'Feita este mês' : 'Concluída';
 const hasRedeemed = itemId => S.reds.some(r => r.item === itemId && r.player === S.me && r.season === S.cfg.seasonKey && r.status !== 'recusada');
 
 /* ---------- Layout ---------- */
 let lastShape = '';
-const shape = () => [isSup(), !!me(), isBlocked(), S.tab, S.sub, S.viewAs].join('|');
+const shape = () => [isSup(), !!me(), isBlocked(), S.tab, S.sub, S.viewAs, S.invite === undefined ? 'u' : !!S.invite, S.cfg.inviteOnly].join('|');
 function changed(){ if (!S.loaded) return; if (shape() !== lastShape) build(); else fill(); }
 
 function tabsFor(){
   if (S.viewAs) return [['loja', 'Loja'], ['tarefas', 'Tarefas'], ['ranking', 'Ranking']];
-  let t = [['loja', 'Loja'], ['tarefas', 'Tarefas'], ['meus', 'Meus resgates'], ['ranking', 'Ranking']];
+  let t = [['loja', 'Loja'], ['tarefas', 'Tarefas'], ['meus', 'Meu perfil'], ['ranking', 'Ranking']];
   if (!me()) t = t.filter(x => x[0] !== 'meus');
   if (isSup()) t.push(['sup', 'Supervisão']);
   return t;
@@ -454,10 +581,13 @@ function newCount(kind){
   if (kind === 'items') return S.items.filter(i => i.active !== false && (i.createdAt || 0) > seen).length;
   return S.tasks.filter(t => t.active !== false && !isExpired(t) && (t.createdAt || 0) > seen).length;
 }
-function supCount(){ return S.redsOpen.filter(r => r.status === 'pendente').length + S.subsPend.length; }
+const scopedPendSubs = () => S.subsPend.filter(x => inScope(x.sector));
+const scopedOpenReds = () => S.redsOpen.filter(r => inScope(r.sector));
+const scopedPendKudos = () => S.kudosPend.filter(k => inScope(k.sector));
+function supCount(){ return scopedOpenReds().filter(r => r.status === 'pendente').length + scopedPendSubs().length + scopedPendKudos().length; }
 function tabBadges(){
   const set = (k, n) => { const el = document.getElementById('badge-' + k); if (el) el.innerHTML = n ? ` <span class="count">${n}</span>` : ''; };
-  set('loja', S.tab === 'loja' ? 0 : newCount('items')); set('tarefas', S.tab === 'tarefas' ? 0 : newCount('tasks')); set('sup', supCount());
+  set('loja', S.tab === 'loja' ? 0 : newCount('items')); set('tarefas', S.tab === 'tarefas' ? 0 : newCount('tasks')); set('sup', isSup() ? supCount() : 0);
 }
 function markSeen(kind){
   if (isSup() || !canAct()) { S[kind === 'items' ? 'newItems' : 'newTasks'] = new Set(); return; }
@@ -468,11 +598,13 @@ function markSeen(kind){
 
 function renderHeader(){
   const sup = isSup(), p = me();
-  $('#role').textContent = S.viewAs ? 'Prévia · ' + SECT[S.viewAs].name : S.owner ? 'Administrador' : sup ? 'Supervisão' : p ? (p.name || 'Colaborador') + ' · ' + SECT[p.sector].name + (p.supRequest ? ' · supervisão aguardando liberação' : '') : 'Novo por aqui';
+  const scope = sup && !S.owner && myScope() !== 'all' ? ' · ' + tName(myScope()) : '';
+  $('#role').textContent = S.viewAs ? 'Prévia · ' + tName(S.viewAs) : S.owner ? 'Administrador' : sup ? 'Supervisão' + scope : p ? (p.name || 'Colaborador') + ' · ' + tName(p.sector) + (p.supRequest ? ' · supervisão aguardando liberação' : '') : 'Novo por aqui';
   $('#viewBtn').hidden = !sup || !!S.viewAs;
+  $('#installBtn').hidden = !installEvt;
 }
-const previewBar = () => S.viewAs ? `<div class="previewbar"><span>Prévia: você está vendo o Unicoins como um colaborador do ${SECT[S.viewAs].name}. Trocas e envios ficam desativados.</span>
-  ${SECS.map(k => `<button class="btn sm" data-viewas="${k}" aria-current="${S.viewAs === k}">${SECT[k].name}</button>`).join('')}<button class="btn sm" id="exitView">Sair da prévia</button></div>` : '';
+const previewBar = () => S.viewAs ? `<div class="previewbar"><span>Prévia: você está vendo o Unicoins como um colaborador do time ${esc(tName(S.viewAs))}. Trocas e envios ficam desativados.</span>
+  ${activeTeams().map(k => `<button class="btn sm" data-viewas="${esc(k)}" aria-current="${S.viewAs === k}">${esc(tName(k))}</button>`).join('')}<button class="btn sm" id="exitView">Sair da prévia</button></div>` : '';
 
 function build(){
   lastShape = shape();
@@ -481,13 +613,20 @@ function build(){
   if (isBlocked()) { $('#tabs').innerHTML = ''; $('#main').innerHTML = `<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">Seu acesso ao Unicoins foi removido.</h2><p class="hint">Se achar que é um engano, fale com a supervisão.</p></div>`; return; }
   if (!sup && !p) {
     $('#tabs').innerHTML = '';
+    if (S.invite === undefined) { $('#main').innerHTML = '<p class="hint">Verificando seu acesso…</p>'; return; }
+    if (S.invite) {
+      $('#main').innerHTML = `<div class="notice"><span class="coin big spin" aria-hidden="true">U</span><h2 style="margin-top:18px">Bem-vindo, ${esc(S.invite.name)}!</h2><p class="hint">Preparando sua entrada no time ${esc(tName(S.invite.sector))}…</p></div>`;
+      if (!S.autoJoining) { S.autoJoining = true; join(S.invite.name, S.invite.sector, false, true); }
+      return;
+    }
+    if (S.cfg.inviteOnly) { $('#main').innerHTML = `<div class="notice"><span class="coin big" aria-hidden="true">U</span><h2 style="margin-top:16px">Seu e-mail ainda não foi liberado</h2><p class="hint">O e-mail ${esc(S.email)} não está na lista de colaboradores autorizados. Fale com a supervisão do seu time para ser incluído.</p></div>`; return; }
     $('#main').innerHTML = `<div class="notice"><span class="coin big spin" aria-hidden="true">U</span>
       <h2 style="margin-top:18px">Cadastre-se para entrar na loja</h2>
-      <p class="hint">Seus Unicoins e os prêmios disponíveis dependem do setor. Só a supervisão pode mudar o setor depois.</p>
+      <p class="hint">Seus Unicoins e os prêmios disponíveis dependem do time. Só a supervisão pode mudar o time depois.</p>
       <form id="joinForm" class="joinform" autocomplete="off">
         <label class="f" for="jName">Seu nome</label><input class="in" id="jName" required maxlength="60" placeholder="Nome e sobrenome">
-        <span class="f" style="margin-top:14px">Seu setor</span>
-        <div class="choose" style="margin-top:6px">${SECS.map(k => `<button type="button" class="${k}" data-pick="${k}" aria-pressed="${S.joinSector === k}">${SECT[k].name}</button>`).join('')}</div>
+        <span class="f" style="margin-top:14px">Seu time</span>
+        <div class="choose" style="margin-top:6px">${activeTeams().map(k => `<button type="button" class="team t-${esc(k)}" data-pick="${esc(k)}" aria-pressed="${S.joinSector === k}">${esc(tName(k))}</button>`).join('')}</div>
         <label class="check"><input type="checkbox" id="jSup"> Faço parte da supervisão (o administrador precisa liberar)</label>
         <button class="btn" type="submit" style="margin-top:18px;width:100%">Entrar na loja</button>
       </form></div>`;
@@ -502,9 +641,19 @@ function build(){
   if (S.tab === 'tarefas') { markSeen('tasks'); M.innerHTML = pre + `<div id="mural"></div><div class="section-head"><h2>Tarefas</h2><span class="hint">Conclua e ganhe Unicoins. A supervisão confere antes de creditar.</span></div>
     <div id="taskPrev"></div><div class="grid" id="tasks"></div>
     ${canAct() ? `<section class="panel" style="margin-top:24px"><h3>Minhas entregas</h3><ul class="list" id="mySubs"></ul></section>` : ''}`; }
-  if (S.tab === 'meus') M.innerHTML = `<div class="cols"><section class="panel"><h3>Extrato</h3><ul class="list" id="myLedger"></ul></section>
+  if (S.tab === 'meus') M.innerHTML = `<div id="installHint"></div>
+    <section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Conquistas</h3><span class="hint" id="badgeCount"></span></div><div class="badges" id="badges"></div></section>
+    ${canAct() ? `<div class="cols two" style="margin-top:18px">
+      <form class="panel" id="kudoForm"><h3>Reconhecer um colega</h3><p class="hint" style="margin-top:-4px;font-size:14px">Alguém do seu time te ajudou? Conte o que ele fez. Se a supervisão aprovar, ele ganha Unicoins.</p>
+        <label class="f" for="kTo">Colega</label><select class="in" id="kTo"></select>
+        <label class="f" for="kMsg">O que ele fez</label><textarea class="in" id="kMsg" rows="3" maxlength="200" placeholder="Ex.: Me ajudou a resolver um caso difícil de matrícula">${esc(S.kudoDraft.msg)}</textarea>
+        <p class="hint" id="kLimit" style="font-size:13px;margin:6px 0 0"></p>
+        <button class="btn" type="submit" style="margin-top:12px">Enviar reconhecimento</button></form>
+      <section class="panel"><h3>Reconhecimentos</h3><ul class="list" id="kudoList"></ul></section></div>` : ''}
+    <div class="cols" style="margin-top:18px"><section class="panel"><h3>Extrato</h3><ul class="list" id="myLedger"></ul></section>
     <section class="panel"><h3>Meus resgates</h3><ul class="list" id="myReds"></ul></section></div>`;
-  if (S.tab === 'ranking') M.innerHTML = pre + `<div class="section-head"><h2 id="rankTitle"></h2><span class="hint">Moedas ganhas na temporada, sem descontar as trocas.</span></div><div class="rank" id="rank"></div>
+  if (S.tab === 'ranking') M.innerHTML = pre + `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Placar dos times</h3><span class="hint">Moedas ganhas na temporada por cada time</span></div><div id="teamBoard"></div></section>
+    <div class="section-head" style="margin-top:26px"><h2 id="rankTitle"></h2><span class="hint">Moedas ganhas na temporada, sem descontar as trocas.</span></div><div class="rank" id="rank"></div>
     <div class="section-head" style="margin-top:30px"><h2>Temporadas anteriores</h2></div><div id="seasonsBox"></div>`;
   if (S.tab === 'sup') buildSup();
   fill();
@@ -517,7 +666,7 @@ function fill(){
   if (mural) mural.innerHTML = S.notice && S.notice.text ? `<div class="mural"><b>📌 Recado da supervisão</b><p>${esc(S.notice.text)}</p></div>` : '';
   if (S.tab === 'loja') fillStore();
   if (S.tab === 'tarefas') keepFocus(fillTasks);
-  if (S.tab === 'meus') fillMine();
+  if (S.tab === 'meus') keepFocus(fillMine);
   if (S.tab === 'ranking') fillRank();
   if (S.tab === 'sup') keepFocus(fillSup);
 }
@@ -528,16 +677,25 @@ function keepFocus(fn){
 }
 
 /* ---------- Loja ---------- */
+function wishHtml(){
+  const p = me(); if (!p || !p.wish || S.viewAs) return '';
+  const it = S.items.find(i => i.id === p.wish && i.active !== false);
+  if (!it) return '';
+  if (hasRedeemed(it.id)) return `<div class="wish">🎉 Você já resgatou sua meta: <b>${esc(it.name)}</b>. Escolha outra na loja.</div>`;
+  const pct = Math.min(100, Math.round(100 * bal(S.me) / Math.max(1, it.cost))), falta = it.cost - bal(S.me);
+  return `<div class="wish"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span>⭐ Meta: <b>${esc(it.name)}</b></span><span class="hint" style="white-space:nowrap">${falta > 0 ? `faltam ${fmt(falta)}` : 'já dá para trocar!'}</span></div>
+    <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso da meta"><i style="width:${pct}%"></i></div></div>`;
+}
 function fillStore(){
   const p = me(), sup = isSup(), sector = viewSector();
   const act = canAct() && p.sector === sector;
-  $('#hero').innerHTML = p && !S.viewAs ? `<div class="hero"><span class="coin big ${S.spun ? '' : 'spin'}" aria-hidden="true">U</span><div>
-    <div class="amount">${fmt(bal(S.me))}</div><div class="label">Unicoins para trocar · <span class="sector-tag ${p.sector}">${SECT[p.sector].name}</span> · ${esc(seasonLabel())}</div></div></div>` : '';
+  $('#hero').innerHTML = p && !S.viewAs ? `<div class="hero"><span class="coin big ${S.spun ? '' : 'spin'}" aria-hidden="true">U</span><div style="min-width:0">
+    <div class="amount">${fmt(bal(S.me))}</div><div class="label">Unicoins para trocar · ${tTag(p.sector)} · ${esc(seasonLabel())}</div>${wishHtml()}</div></div>` : '';
   if (p && !S.viewAs) S.spun = true;
-  $('#previewNav').innerHTML = sup && !S.viewAs ? `<div class="subnav">${SECS.map(k => `<button data-prev="${k}" aria-current="${sector === k}">Loja ${SECT[k].name}</button>`).join('')}</div>` : '';
+  $('#previewNav').innerHTML = sup && !S.viewAs ? `<div class="subnav">${activeTeams().map(k => `<button data-prev="${esc(k)}" aria-current="${sector === k}">Loja ${esc(tName(k))}</button>`).join('')}</div>` : '';
   const items = S.items.filter(i => i.active !== false && (i.sector === 'ambos' || i.sector === sector)).sort((a, b) => a.cost - b.cost);
   $('#storeHint').textContent = `${items.length} ${items.length === 1 ? 'prêmio' : 'prêmios'} · cada prêmio pode ser resgatado 1 vez por pessoa na temporada`;
-  if (!items.length) { $('#store').innerHTML = `<p class="empty" style="grid-column:1/-1">${sup && !S.viewAs ? 'Nenhum prêmio para este setor. Adicione em Supervisão › Prêmios.' : 'A loja ainda está vazia. Os prêmios aparecem aqui assim que a supervisão cadastrar.'}</p>`; return; }
+  if (!items.length) { $('#store').innerHTML = `<p class="empty" style="grid-column:1/-1">${sup && !S.viewAs ? 'Nenhum prêmio para este time. Adicione em Supervisão › Prêmios.' : 'A loja ainda está vazia. Os prêmios aparecem aqui assim que a supervisão cadastrar.'}</p>`; return; }
   $('#store').innerHTML = items.map(i => {
     const out = i.stock !== null && i.stock !== undefined && i.stock <= 0;
     const done = act && hasRedeemed(i.id);
@@ -551,11 +709,13 @@ function fillStore(){
       else if (S.confirmId === i.id) btn = `<button class="btn warn" data-buy="${i.id}" data-confirm="1">Confirmar troca</button>`;
       else btn = `<button class="btn" data-buy="${i.id}">Trocar</button>`;
     } else if (out) btn = `<span class="hint">Esgotado</span>`;
+    const isWish = act && p.wish === i.id;
+    const wishBtn = act && !done && !out ? `<p style="margin:10px 0 0"><button class="linkbtn" data-wish="${isWish ? '' : i.id}">${isWish ? '★ Sua meta · remover' : '☆ Definir como meta'}</button></p>` : '';
     const stock = i.stock === null || i.stock === undefined ? 'Estoque livre' : out ? 'Sem estoque' : `${fmt(i.stock)} restantes`;
     const img = safeImg(i.image);
     return `<article class="ticket ${out || done ? 'off' : ''}">${img ? `<div class="pic"><img src="${img}" alt=""></div>` : ''}<div class="body">${img ? '' : `<div class="emoji" aria-hidden="true">${esc(i.emoji || '🎁')}</div>`}
       <h3>${esc(i.name)}</h3>${i.desc ? `<p>${esc(i.desc)}</p>` : ''}
-      <div class="meta">${S.newItems.has(i.id) ? '<span class="sector-tag new">Nova</span>' : ''}<span class="sector-tag ${i.sector}">${(SECT[i.sector] || {}).name || ''}</span><span class="sector-tag ambos">${stock}</span></div></div>
+      <div class="meta">${S.newItems.has(i.id) ? '<span class="sector-tag new">Nova</span>' : ''}${tTag(i.sector)}<span class="sector-tag ambos">${stock}</span></div>${wishBtn}</div>
       <div class="stub"><span class="price">${coin}${fmt(i.cost)}</span>${btn}</div></article>`;
   }).join('');
 }
@@ -564,25 +724,24 @@ function fillStore(){
 function fillTasks(){
   const p = me(), sup = isSup(), sector = viewSector();
   const act = canAct() && p.sector === sector;
-  $('#taskPrev').innerHTML = sup && !S.viewAs ? `<div class="subnav">${SECS.map(k => `<button data-prev="${k}" aria-current="${sector === k}">Tarefas ${SECT[k].name}</button>`).join('')}</div>` : '';
-  const mineOf = t => S.subs.filter(x => x.task === t.id && x.player === S.me);
+  $('#taskPrev').innerHTML = sup && !S.viewAs ? `<div class="subnav">${activeTeams().map(k => `<button data-prev="${esc(k)}" aria-current="${sector === k}">Tarefas ${esc(tName(k))}</button>`).join('')}</div>` : '';
   let list = S.tasks.filter(t => t.active !== false && visibleFor(t, sector));
-  if (!sup || S.viewAs) list = list.filter(t => !isExpired(t) || (act && mineOf(t).some(x => x.status !== 'recusada')));
+  if (!sup || S.viewAs) list = list.filter(t => !isExpired(t) || (act && mySubsFor(t).some(x => x.status !== 'recusada')));
   list.sort((a, b) => (isExpired(a) - isExpired(b)) || ((a.deadlineAt || 9e15) - (b.deadlineAt || 9e15)) || ((b.createdAt || 0) - (a.createdAt || 0)));
   const box = $('#tasks');
-  if (!list.length) box.innerHTML = `<p class="empty" style="grid-column:1/-1">${sup && !S.viewAs ? 'Nenhuma tarefa para este setor. Crie em Supervisão › Tarefas.' : 'Nenhuma tarefa aberta agora. Novas tarefas aparecem aqui assim que a supervisão publicar.'}</p>`;
+  if (!list.length) box.innerHTML = `<p class="empty" style="grid-column:1/-1">${sup && !S.viewAs ? 'Nenhuma tarefa para este time. Crie em Supervisão › Tarefas.' : 'Nenhuma tarefa aberta agora. Novas tarefas aparecem aqui assim que a supervisão publicar.'}</p>`;
   else box.innerHTML = list.map(t => {
-    const mine = act ? mineOf(t) : [];
+    const mine = act ? mySubsFor(t) : [];
     const pend = mine.some(x => x.status === 'pendente'), done = mine.some(x => x.status === 'aprovada');
     const exp = isExpired(t);
     let action = '';
     if (S.viewAs) action = `<button class="btn" disabled>${t.proof ? 'Enviar comprovação' : 'Marcar como feita'}</button>`;
     else if (act) {
       if (pend) action = `<span class="status pendente">Em análise</span>`;
-      else if (done && !t.repeat) action = `<span class="status aprovada">Concluída</span>`;
+      else if (done && !t.repeat) action = `<span class="status aprovada">${recurDone(t)}</span>`;
       else if (exp) action = `<span class="status recusada">Prazo encerrado</span>`;
       else if (S.openTask !== t.id) action = `<button class="btn" data-open="${t.id}">${t.proof ? 'Enviar comprovação' : 'Marcar como feita'}</button>`;
-    } else if (sup) { const aud = audiencePlayers(t), ok = new Set(S.subs.filter(x => x.task === t.id && x.status === 'aprovada').map(x => x.player)); action = `<span class="hint">${aud.filter(p => ok.has(p.id)).length}/${aud.length} concluíram</span>`; }
+    } else if (sup) { const aud = audiencePlayers(t), per = curPeriod(t), ok = new Set(S.subs.filter(x => x.task === t.id && x.status === 'aprovada' && (!per || x.period === per)).map(x => x.player)); action = `<span class="hint">${aud.filter(q => ok.has(q.id)).length}/${aud.length} concluíram</span>`; }
     const form = act && S.openTask === t.id && !exp ? `<form class="tform" id="subForm" data-task="${t.id}">
         <label class="f" for="sNote" style="margin-top:0">${t.proof ? 'Comprovação: link ou descrição' : 'Observação (opcional)'}</label>
         <textarea class="in" id="sNote" rows="2" maxlength="500">${esc(S.draft.note)}</textarea>
@@ -592,9 +751,10 @@ function fillTasks(){
         <div class="row" style="margin-top:12px"><button class="btn" type="submit">Enviar para a supervisão</button><button class="btn ghost" type="button" id="sCancel">Cancelar</button></div></form>` : '';
     const dl = t.deadlineAt ? `<span class="sector-tag ${exp ? 'late' : 'ambos'}">${exp ? 'Encerrada em ' : 'Até '}${dateBR(t.deadlineAt)}</span>` : '';
     return `<article class="ticket ${exp ? 'off' : ''}"><div class="body"><div class="meta" style="margin-top:0">
-      ${S.newTasks.has(t.id) ? '<span class="sector-tag new">Nova</span>' : ''}${isIndividual(t) ? '<span class="sector-tag ambos">Individual</span>' : `<span class="sector-tag ${t.sector}">${(SECT[t.sector] || {}).name || ''}</span>`}
-      ${dl}${t.proof ? '<span class="sector-tag ambos">Exige comprovação</span>' : ''}${t.repeat ? '<span class="sector-tag ambos">Repetível</span>' : ''}</div>
-      <h3>${esc(t.title)}</h3>${t.desc ? `<p style="white-space:pre-wrap">${esc(t.desc)}</p>` : ''}${sup && !S.viewAs && isIndividual(t) ? `<p class="hint" style="font-size:13px;margin-top:6px">Para: ${esc(audLabel(t))}</p>` : ''}${form}</div>
+      ${S.newTasks.has(t.id) ? '<span class="sector-tag new">Nova</span>' : ''}${isIndividual(t) ? '<span class="sector-tag ambos">Individual</span>' : tTag(t.sector)}
+      ${isRecurring(t) ? `<span class="sector-tag ambos">🔁 ${RECUR_LAB[t.recur]}</span>` : ''}${dl}${t.proof ? '<span class="sector-tag ambos">Exige comprovação</span>' : ''}${t.repeat && !isRecurring(t) ? '<span class="sector-tag ambos">Repetível</span>' : ''}</div>
+      <h3>${esc(t.title)}</h3>${t.desc ? `<p style="white-space:pre-wrap">${esc(t.desc)}</p>` : ''}${isRecurring(t) ? `<p class="hint" style="font-size:13px;margin-top:6px">Pode ser feita uma vez por ${t.recur === 'semanal' ? 'semana' : 'mês'}; ${recurNote(t)}.</p>` : ''}
+      ${sup && !S.viewAs && isIndividual(t) ? `<p class="hint" style="font-size:13px;margin-top:6px">Para: ${esc(audLabel(t))}</p>` : ''}${form}</div>
       <div class="stub"><span class="reward">+${fmt(t.reward)} ${coin}</span>${action}</div></article>`;
   }).join('');
   const ms = $('#mySubs');
@@ -603,13 +763,54 @@ function fillTasks(){
       <span class="reward" style="font-size:16px;${x.status === 'aprovada' ? '' : 'color:var(--muted)'}">+${fmt(x.reward)}</span><span class="status ${x.status}">${SUB_LAB[x.status]}</span></li>`).join('') : '<li class="empty">Você ainda não enviou nenhuma tarefa.</li>'; }
 }
 
-/* ---------- Meus resgates ---------- */
+/* ---------- Conquistas ---------- */
+function myBadges(){
+  const mine = S.subs.filter(x => x.player === S.me);
+  const ok = mine.filter(x => x.status === 'aprovada'), refused = mine.filter(x => x.status === 'recusada');
+  const reds = S.reds.filter(r => r.player === S.me && r.status !== 'recusada');
+  const kin = S.kudos.filter(k => k.to === S.me && k.status === 'aprovado').length;
+  const kout = S.kudos.filter(k => k.from === S.me && k.status === 'aprovado').length;
+  const weeks = new Set(ok.map(x => weekOf(x.doneAt || x.at))).size;
+  const myName = (me() && me().name) || '';
+  const podium = S.seasons.filter(se => Object.values(se.ranking || {}).some(arr => (arr || []).slice(0, 3).some(r => r.id ? r.id === S.me : r.name === myName))).length;
+  return [
+    { ic:'🎯', name:'Primeira tarefa', desc:'1 tarefa aprovada', goal:1, val:ok.length },
+    { ic:'🏅', name:'Mão na massa', desc:'5 tarefas aprovadas', goal:5, val:ok.length },
+    { ic:'🚀', name:'Imparável', desc:'20 tarefas aprovadas', goal:20, val:ok.length },
+    { ic:'✨', name:'Comprovação impecável', desc:'5 aprovadas sem nenhuma recusa', goal:5, val:refused.length ? 0 : ok.length },
+    { ic:'📅', name:'Constância', desc:'Tarefas aprovadas em 4 semanas diferentes', goal:4, val:weeks },
+    { ic:'🎁', name:'Primeira troca', desc:'1 prêmio resgatado', goal:1, val:reds.length },
+    { ic:'💜', name:'Reconhecido', desc:'Recebeu um reconhecimento', goal:1, val:kin },
+    { ic:'🤝', name:'Parceiro de equipe', desc:'3 reconhecimentos dados e aprovados', goal:3, val:kout },
+    { ic:'🏆', name:'Pódio', desc:'Top 3 do time em uma temporada', goal:1, val:podium }
+  ];
+}
+
+/* ---------- Meu perfil ---------- */
 function ledgerLi(l, showWho){
   const pos = l.amount >= 0;
   return `<li><div class="grow"><div class="t">${esc(l.reason || '')}</div><div class="s">${showWho ? esc(nm(l.player)) + ' · ' : ''}${when(l.at)}</div></div>
     <span class="${pos ? 'plus' : 'minus'}">${pos ? '+' : ''}${fmt(l.amount)}</span></li>`;
 }
+const kudosThisWeek = () => S.kudos.filter(k => k.from === S.me && k.status !== 'recusado' && weekOf(k.at) === weekOf(now())).length;
 function fillMine(){
+  const ih = $('#installHint');
+  if (ih) ih.innerHTML = isIOS() ? `<div class="wish" style="margin:0 0 18px">📱 Para instalar o Unicoins no iPhone: toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</div>` : '';
+  const bs = myBadges(), got = bs.filter(b => b.val >= b.goal).length;
+  $('#badgeCount').textContent = `${got} de ${bs.length} conquistadas`;
+  $('#badges').innerHTML = bs.map(b => { const done = b.val >= b.goal; return `<div class="badge ${done ? '' : 'locked'}" title="${esc(b.desc)}"><div class="ic" aria-hidden="true">${b.ic}</div><b>${esc(b.name)}</b><span>${done ? esc(b.desc) : `${Math.min(b.val, b.goal)}/${b.goal} · ${esc(b.desc)}`}</span></div>`; }).join('');
+  const kTo = $('#kTo');
+  if (kTo) {
+    const mates = Object.values(S.players).filter(q => q.id !== S.me && !q.blocked && !ADMIN_UIDS.includes(q.id) && q.sector === me().sector).sort((a, b) => nm(a.id).localeCompare(nm(b.id)));
+    const keep = S.kudoDraft.to;
+    kTo.innerHTML = '<option value="">Selecione…</option>' + mates.map(q => `<option value="${q.id}" ${q.id === keep ? 'selected' : ''}>${esc(nm(q.id))}</option>`).join('');
+    const left = 3 - kudosThisWeek();
+    $('#kLimit').textContent = mates.length ? (left > 0 ? `Você pode enviar mais ${left} ${left === 1 ? 'reconhecimento' : 'reconhecimentos'} esta semana.` : 'Você já enviou 3 reconhecimentos esta semana. Volte na segunda-feira.') : 'Ainda não há colegas do seu time cadastrados.';
+    const recv = S.kudos.filter(k => k.to === S.me && k.status === 'aprovado'), sent = S.kudos.filter(k => k.from === S.me);
+    $('#kudoList').innerHTML = (recv.length || sent.length) ? recv.map(k => `<li><span style="font-size:22px" aria-hidden="true">💜</span><div class="grow"><div class="t">${esc(nm(k.from))} reconheceu você</div><div class="s">“${esc(k.message)}” · ${dateBR(k.at)}</div></div><span class="plus">+${fmt(k.bonus)}</span></li>`).join('')
+      + sent.map(k => `<li><span style="font-size:22px" aria-hidden="true">🤝</span><div class="grow"><div class="t">Você reconheceu ${esc(nm(k.to))}</div><div class="s">“${esc(k.message)}” · ${dateBR(k.at)}</div></div><span class="status ${k.status === 'aprovado' ? 'aprovada' : k.status === 'recusado' ? 'recusada' : 'pendente'}">${KUDO_LAB[k.status]}</span></li>`).join('')
+      : '<li class="empty">Os reconhecimentos que você receber ou enviar aparecem aqui.</li>';
+  }
   const L = S.ledger.filter(l => l.player === S.me), R = S.reds.filter(r => r.player === S.me);
   $('#myLedger').innerHTML = L.length ? L.map(l => ledgerLi(l, false)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
   $('#myReds').innerHTML = R.length ? R.map(r => `<li><span style="font-size:24px" aria-hidden="true">${esc(r.emoji || '🎁')}</span><div class="grow"><div class="t">${esc(r.itemName)}</div>
@@ -618,49 +819,61 @@ function fillMine(){
 
 /* ---------- Ranking ---------- */
 function fillRank(){
-  const secs = isSup() && !S.viewAs ? SECS : [viewSector()];
+  const sc = teamScoresNow();
+  const rows = Object.entries(sc).filter(([k, v]) => S.teams[k] && v.members > 0).map(([k, v]) => ({ k, total:v.total, members:v.members, avg:Math.round(v.total / v.members) })).sort((a, b) => b.total - a.total);
+  const max = Math.max(1, ...rows.map(r => r.total));
+  $('#teamBoard').innerHTML = rows.length ? rows.map((r, i) => `<div class="teamrow"><span class="pos ${i === 0 && r.total > 0 ? 'p1' : ''}">${i + 1}</span>
+    <div style="min-width:0"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${tTag(r.k)}<span class="hint" style="font-size:13px">${r.members} ${r.members === 1 ? 'pessoa' : 'pessoas'} · média ${fmt(r.avg)} por pessoa</span></div>
+    <div class="bar team t-${esc(r.k)}"><i style="width:${Math.round(100 * r.total / max)}%;background:var(--c)"></i></div></div>
+    <span class="price" style="font-size:18px">${coin}${fmt(r.total)}</span></div>`).join('')
+    : '<p class="empty">O placar aparece quando os times começarem a ganhar moedas.</p>';
+  const secs = isSup() && !S.viewAs ? activeTeams() : [viewSector()];
   $('#rankTitle').textContent = 'Ranking · ' + seasonLabel();
   $('#rank').innerHTML = secs.map(k => {
     const ps = Object.values(S.players).filter(p => p.sector === k && !p.blocked && earned(p.id) > 0).sort((a, b) => earned(b.id) - earned(a.id)).slice(0, 10);
-    return `<section class="panel"><h3><span class="sector-tag ${k}">${SECT[k].name}</span></h3><ul class="list">${ps.length ? ps.map((p, i) => `<li><span class="pos ${i === 0 ? 'p1' : ''}">${i + 1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém pontuou ainda neste setor.</li>'}</ul></section>`;
+    return `<section class="panel"><h3>${tTag(k)}</h3><ul class="list">${ps.length ? ps.map((p, i) => `<li><span class="pos ${i === 0 ? 'p1' : ''}">${i + 1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém pontuou ainda neste time.</li>'}</ul></section>`;
   }).join('');
   $('#seasonsBox').innerHTML = S.seasons.length ? `<div class="rank">${S.seasons.map(se => `<section class="panel"><h3>${esc(se.name)}</h3><p class="hint" style="margin:-6px 0 8px;font-size:13px">${dateBR(se.startedAt)} a ${dateBR(se.endedAt)}</p>
-    ${secs.map(k => { const top = ((se.ranking || {})[k] || []).slice(0, 3); return `<div style="margin-top:8px"><span class="sector-tag ${k}">${SECT[k].name}</span><div class="podium">${top.length ? top.map((r, i) => `<span>${['🥇', '🥈', '🥉'][i]} ${esc(r.name)} · ${fmt(r.earned)}</span>`).join('') : '<span>Sem pontuação</span>'}</div></div>`; }).join('')}</section>`).join('')}</div>`
+    ${secs.map(k => { const top = ((se.ranking || {})[k] || []).slice(0, 3); return `<div style="margin-top:8px">${tTag(k)}<div class="podium">${top.length ? top.map((r, i) => `<span>${['🥇', '🥈', '🥉'][i]} ${esc(r.name)} · ${fmt(r.earned)}</span>`).join('') : '<span>Sem pontuação</span>'}</div></div>`; }).join('')}</section>`).join('')}</div>`
     : '<p class="empty">Quando a supervisão encerrar uma temporada, o pódio fica guardado aqui.</p>';
 }
 
 /* ---------- Supervisão ---------- */
 function subsFor(){
-  const s = [['tarefas', 'Tarefas'], ['premios', 'Prêmios'], ['moedas', 'Moedas'], ['pedidos', 'Pedidos'], ['painel', 'Painel'], ['mural', 'Mural']];
-  if (S.owner) s.push(['colab', 'Colaboradores']);
+  const s = [['tarefas', 'Tarefas'], ['premios', 'Prêmios'], ['moedas', 'Moedas'], ['pedidos', 'Pedidos'], ['kudos', 'Reconhecimentos'], ['painel', 'Painel'], ['mural', 'Mural']];
+  if (S.owner) s.push(['times', 'Times'], ['colab', 'Colaboradores']);
   s.push(['acessos', 'Acessos']);
   return s;
 }
+const sectorSelect = (id, withAll) => `<select class="in" id="${id}" aria-label="Time">${withAll && myScope() === 'all' ? '<option value="ambos">Todos os times</option>' : ''}${teamOptions(scopeTeams())}</select>`;
+const scopeNote = () => myScope() !== 'all' ? `<p class="setup" style="margin:0 0 16px">Você gerencia o time <b>${esc(tName(myScope()))}</b>. Itens de outros times ou de todos os times aparecem só para consulta.</p>` : '';
+
 function buildSup(){
   const subs = subsFor();
   if (!subs.some(x => x[0] === S.sub)) S.sub = 'tarefas';
-  let h = `<div class="subnav" id="subnav">${subs.map(([k, l]) => `<button data-sub="${k}" aria-current="${S.sub === k}">${l}<span id="sc-${k}"></span></button>`).join('')}</div>`;
+  let h = `<div class="subnav" id="subnav">${subs.map(([k, l]) => `<button data-sub="${k}" aria-current="${S.sub === k}">${l}<span id="sc-${k}"></span></button>`).join('')}</div>` + (['times', 'colab', 'acessos', 'mural', 'painel'].includes(S.sub) ? '' : scopeNote());
   if (S.sub === 'tarefas') h += `<div class="cols">
     <form class="panel" id="taskForm" autocomplete="off"><h3 id="tFormTitle">Nova tarefa</h3>
       <label class="f" for="tTitle">Tarefa</label><input class="in" id="tTitle" maxlength="80" required placeholder="Ex.: Zerar fila de e-mails pendentes">
       <label class="f" for="tDesc">Como fazer / o que conta</label><textarea class="in" id="tDesc" rows="3" maxlength="300" placeholder="Critérios para a tarefa ser aprovada"></textarea>
       <div class="row"><div><label class="f" for="tReward">Recompensa (Unicoins)</label><input class="in" id="tReward" type="number" min="1" step="1" required></div>
       <div><label class="f" for="tDeadline">Prazo (opcional)</label><input class="in" id="tDeadline" type="date"></div></div>
+      <label class="f" for="tRecur">Repetição</label><select class="in" id="tRecur"><option value="">Não repete</option><option value="semanal">Toda semana (reabre na segunda)</option><option value="mensal">Todo mês (reabre no dia 1º)</option></select>
       <span class="f">Para quem</span>
-      <div class="subnav" style="margin-bottom:8px"><button type="button" data-tmode="setor" aria-current="${S.tMode !== 'pessoas'}">Setor inteiro</button><button type="button" data-tmode="pessoas" aria-current="${S.tMode === 'pessoas'}">Colaboradores específicos</button></div>
-      <div id="tModeSetor" ${S.tMode === 'pessoas' ? 'hidden' : ''}><select class="in" id="tSector" aria-label="Setor"><option value="ambos">Todos os setores</option>${secOptions()}</select>
-        <p class="hint" style="font-size:13px;margin:6px 0 0">Cada pessoa do setor recebe a tarefa e faz a sua entrega individualmente.</p></div>
+      <div class="subnav" style="margin-bottom:8px"><button type="button" data-tmode="setor" aria-current="${S.tMode !== 'pessoas'}">Time inteiro</button><button type="button" data-tmode="pessoas" aria-current="${S.tMode === 'pessoas'}">Colaboradores específicos</button></div>
+      <div id="tModeSetor" ${S.tMode === 'pessoas' ? 'hidden' : ''}>${sectorSelect('tSector', true)}
+        <p class="hint" style="font-size:13px;margin:6px 0 0">Cada pessoa do time recebe a tarefa e faz a sua entrega individualmente.</p></div>
       <div id="tModePessoas" ${S.tMode === 'pessoas' ? '' : 'hidden'}><input class="in" id="tFind" placeholder="Filtrar por nome" value="${esc(S.tFind)}">
         <ul class="list" id="tPeople" style="max-height:240px;overflow:auto;margin-top:6px"></ul><p class="hint" id="tSelCount" style="margin:4px 0 0;font-size:13px"></p></div>
       <label class="check"><input type="checkbox" id="tProof"> Exigir comprovação (imagem ou texto)</label>
-      <label class="check"><input type="checkbox" id="tRepeat"> Pode ser feita mais de uma vez</label>
+      <label class="check" id="tRepeatBox"><input type="checkbox" id="tRepeat"> Pode ser feita mais de uma vez</label>
       <label class="check"><input type="checkbox" id="tActive" checked> Visível para os colaboradores</label>
       <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="tSave">Publicar tarefa</button><button class="btn ghost" type="button" id="tCancel" hidden>Cancelar edição</button></div>
     </form>
     <div><section class="panel"><h3>Tarefas cadastradas</h3><ul class="list" id="taskList"></ul></section>
     <section class="panel" id="progressBox" style="margin-top:18px" hidden></section></div></div>
-    <div class="cols" style="margin-top:18px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
-      <section class="panel"><h3>Entregas para conferir</h3><div id="subPend"></div></section>
+    <div class="cols two" style="margin-top:18px">
+      <section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Entregas para conferir</h3><div id="bulkBar" class="row" style="gap:6px;flex:none"></div></div><div id="subPend"></div></section>
       <section class="panel"><h3>Histórico de entregas</h3><div id="subDone"></div></section></div>`;
   if (S.sub === 'premios') h += `<div class="cols">
     <form class="panel" id="itemForm" autocomplete="off"><h3 id="formTitle">Novo prêmio</h3>
@@ -673,7 +886,7 @@ function buildSup(){
       <label class="f" for="fDesc">Descrição</label><textarea class="in" id="fDesc" rows="2" maxlength="160" placeholder="Como e quando o prêmio é entregue"></textarea>
       <div class="row"><div><label class="f" for="fCost">Custo em Unicoins</label><input class="in" id="fCost" type="number" min="1" step="1" required></div>
       <div><label class="f" for="fStock">Estoque</label><input class="in" id="fStock" type="number" min="0" step="1" placeholder="Sem limite"></div></div>
-      <label class="f" for="fSector">Disponível para</label><select class="in" id="fSector"><option value="ambos">Todos os setores</option>${secOptions()}</select>
+      <label class="f" for="fSector">Disponível para</label>${sectorSelect('fSector', true)}
       <label class="check"><input type="checkbox" id="fActive" checked> Visível na loja</label>
       <p class="hint" style="font-size:13px;margin:8px 0 0">Cada colaborador pode resgatar este prêmio 1 vez por temporada.</p>
       <div class="row" style="margin-top:16px"><button class="btn" type="submit" id="fSave">Adicionar à loja</button><button class="btn ghost" type="button" id="fCancel" hidden>Cancelar edição</button></div>
@@ -686,35 +899,61 @@ function buildSup(){
       <label class="f" for="cWhy">Motivo</label><input class="in" id="cWhy" maxlength="80" required placeholder="Ex.: Meta de NPS batida">
       <div class="row" style="margin-top:16px"><button class="btn" type="submit" data-dir="1">Creditar</button><button class="btn ghost" type="submit" data-dir="-1">Debitar</button></div>
     </form>
-    <form class="panel" id="bulkForm" style="margin-top:18px"><h3>Creditar um setor inteiro</h3>
-      <label class="f" for="bSector">Setor</label><select class="in" id="bSector">${secOptions()}</select>
+    <form class="panel" id="bulkForm" style="margin-top:18px"><h3>Creditar um time inteiro</h3>
+      <label class="f" for="bSector">Time</label>${sectorSelect('bSector', false)}
       <label class="f" for="bAmt">Unicoins por pessoa</label><input class="in" id="bAmt" type="number" min="1" step="1" required>
       <label class="f" for="bWhy">Motivo</label><input class="in" id="bWhy" maxlength="80" required placeholder="Ex.: Campanha do mês">
-      <button class="btn warn" type="submit" style="margin-top:16px">Creditar setor</button>
+      <button class="btn warn" type="submit" style="margin-top:16px">Creditar time</button>
     </form>
     ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Temporada</h3>
-      <p class="hint" style="margin-top:-4px;font-size:14px">Agora: <b>${esc(seasonLabel())}</b>${S.cfg.seasonStart ? ', desde ' + dateBR(S.cfg.seasonStart) : ''}. Ao encerrar, o pódio é guardado, as moedas e o ranking de todos são zerados e cada prêmio pode ser resgatado de novo.</p>
+      <p class="hint" style="margin-top:-4px;font-size:14px">Agora: <b>${esc(seasonLabel())}</b>${S.cfg.seasonStart ? ', desde ' + dateBR(S.cfg.seasonStart) : ''}. Ao encerrar, o pódio e o placar dos times são guardados, as moedas e o ranking de todos são zerados e cada prêmio pode ser resgatado de novo.</p>
       <label class="f" for="nextSeason">Nome da próxima temporada</label><input class="in" id="nextSeason" maxlength="40" placeholder="Ex.: Temporada Novembro">
       <button class="btn bad" id="endSeason" style="margin-top:12px">Encerrar temporada</button>
-      <h3 style="margin-top:22px">Zerar só um setor</h3>
-      <div class="row">${SECS.map(k => `<button class="btn bad" data-reset="${k}">Zerar ${k === 'chat' ? 'Chat' : SECT[k].name}</button>`).join('')}</div></section>` : ''}</div>
+      <h3 style="margin-top:22px">Zerar só um time</h3>
+      <div class="row">${activeTeams().map(k => `<button class="btn bad" data-reset="${esc(k)}">Zerar ${esc(tName(k))}</button>`).join('')}</div></section>` : ''}</div>
     <section class="panel"><h3>Colaboradores</h3><ul class="list" id="playerList"></ul><h3 style="margin-top:22px">Movimentações recentes</h3><ul class="list" id="ledgerList"></ul></section></div>`;
-  if (S.sub === 'pedidos') h += `<div class="cols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><section class="panel"><h3>Pedidos em aberto</h3><div id="pendList"></div></section>
+  if (S.sub === 'pedidos') h += `<div class="cols two"><section class="panel"><h3>Pedidos em aberto</h3><div id="pendList"></div></section>
     <section class="panel"><h3>Histórico</h3><ul class="list" id="doneList"></ul></section></div>`;
+  if (S.sub === 'kudos') h += `<div class="cols two"><section class="panel"><h3>Reconhecimentos para aprovar</h3>
+      ${S.owner ? `<div class="row" style="margin-bottom:10px;align-items:flex-end"><div><label class="f" for="kBonusDef" style="margin-top:0">Bônus padrão por reconhecimento</label><input class="in" id="kBonusDef" type="number" min="1" step="1" value="${S.cfg.kudosBonus}"></div><button class="btn ghost" id="kBonusSave" style="flex:none">Salvar</button></div>` : ''}
+      <div id="kudoPend"></div></section>
+    <section class="panel"><h3>Histórico</h3><ul class="list" id="kudoDone"></ul></section></div>`;
   if (S.sub === 'painel') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Indicadores · ${esc(seasonLabel())}</h3><button class="btn ghost sm" id="kpiRefresh">Atualizar</button></div><div id="kpis"></div></section>
     <section class="panel" style="margin-top:18px"><h3>Exportar para Excel</h3><p class="hint" style="margin-top:-4px;font-size:14px">Baixa uma planilha (.csv) que abre direto no Excel.</p>
       <div class="row"><button class="btn ghost" data-export="extrato">Extrato de moedas</button><button class="btn ghost" data-export="trocas">Trocas de prêmios</button><button class="btn ghost" data-export="entregas">Entregas de tarefas</button><button class="btn ghost" data-export="colab">Colaboradores</button></div></section>
-    ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Registro de ações da supervisão</h3><ul class="list" id="auditList"></ul></section>` : ''}`;
+    ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Backup</h3><p class="hint" style="margin-top:-4px;font-size:14px">Guarda todos os dados do Unicoins em um arquivo. Se algo for apagado por engano, você restaura a partir dele.</p>
+      <label class="check" style="margin-top:0"><input type="checkbox" id="bkImages"> Incluir as imagens das comprovações (arquivo maior)</label>
+      <div class="row" style="margin-top:12px"><button class="btn" id="bkDownload" style="flex:none">Baixar backup</button>
+        <input type="file" id="bkFile" accept="application/json,.json" class="sr"><label for="bkFile" class="btn ghost" style="flex:none" tabindex="0" id="bkFileBtn">Restaurar backup</label></div>
+      <div id="bkRestore"></div></section>
+    <section class="panel" style="margin-top:18px"><h3>Registro de ações da supervisão</h3><ul class="list" id="auditList"></ul></section>` : ''}`;
   if (S.sub === 'mural') h += `<section class="panel" style="max-width:640px"><h3>Recado para as equipes</h3>
     <p class="hint" style="margin-top:-4px;font-size:14px">Aparece no topo da Loja e das Tarefas para todos os colaboradores.</p>
     <textarea class="in" id="muralText" rows="4" maxlength="500" placeholder="Ex.: Campanha de outubro: tarefas de NPS valem o dobro até sexta!">${esc(S.muralDraft ?? (S.notice && S.notice.text) ?? '')}</textarea>
     <div class="row" style="margin-top:12px"><button class="btn" id="muralSave">Publicar recado</button><button class="btn ghost" id="muralClear">Remover recado</button></div>
     <p class="hint" id="muralInfo" style="font-size:13px"></p></section>`;
-  if (S.sub === 'colab') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Colaboradores cadastrados</h3><input class="in" id="pFind" placeholder="Buscar por nome ou e-mail" value="${esc(S.pFind)}" style="max-width:280px"></div>
+  if (S.sub === 'times') h += `<div class="cols"><form class="panel" id="teamForm" autocomplete="off"><h3>Novo time</h3>
+      <label class="f" for="nTeamName">Nome do time</label><input class="in" id="nTeamName" maxlength="40" required placeholder="Ex.: Ouvidoria">
+      <span class="f">Cor</span><div class="swatches" id="nTeamColors">${[...Array(PALETTE).keys()].map(c => `<button type="button" class="swatch" data-ncolor="${c}" aria-pressed="${S.newTeamColor === c}" aria-label="Cor ${c + 1}" style="background:var(--p${c})"></button>`).join('')}</div>
+      <button class="btn" type="submit" style="margin-top:16px">Criar time</button>
+      <p class="hint" style="font-size:13px;margin:10px 0 0">O time novo aparece na hora no cadastro, nas lojas, nas tarefas e no ranking. Não precisa mexer no código nem nas regras do Firebase.</p></form>
+    <section class="panel"><h3>Times cadastrados</h3><ul class="list" id="teamList"></ul>
+      <p class="hint" style="font-size:13px;margin-top:12px">Desativar um time tira ele do cadastro e das listas. Quem já está nele continua com acesso, e você pode mudar essas pessoas de time em Colaboradores.</p></section></div>`;
+  if (S.sub === 'colab') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Lista de colaboradores autorizados</h3><span class="hint" id="invCount"></span></div>
+      <label class="check" style="margin-top:0"><input type="checkbox" id="inviteOnly" ${S.cfg.inviteOnly ? 'checked' : ''}> Só quem está na lista pode se cadastrar</label>
+      <p class="hint" style="font-size:13px;margin:6px 0 12px">Quem está na lista entra direto no time certo no primeiro login, sem escolher. Use o mesmo e-mail que a pessoa vai usar para entrar.</p>
+      <form id="invForm" class="row" autocomplete="off" style="align-items:flex-end">
+        <div><label class="f" for="iName">Nome</label><input class="in" id="iName" maxlength="60" required></div>
+        <div><label class="f" for="iEmail">E-mail</label><input class="in" id="iEmail" type="email" required></div>
+        <div><label class="f" for="iSector">Time</label><select class="in" id="iSector">${teamOptions(activeTeams())}</select></div>
+        <button class="btn" type="submit" style="flex:none">Adicionar</button></form>
+      <div class="row" style="margin-top:12px"><input type="file" id="invFile" accept=".csv,text/csv" class="sr"><label for="invFile" class="btn ghost sm" style="flex:none" tabindex="0" id="invFileBtn">Importar planilha (.csv)</label><button class="btn ghost sm" id="invTemplate" style="flex:none">Baixar modelo</button></div>
+      <ul class="list" id="invList" style="margin-top:10px;max-height:340px;overflow:auto"></ul></section>
+    <section class="panel" style="margin-top:18px"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Colaboradores cadastrados</h3><input class="in" id="pFind" placeholder="Buscar por nome ou e-mail" value="${esc(S.pFind)}" style="max-width:280px"></div>
     <ul class="list" id="colabList"></ul>
     <p class="hint" style="font-size:13px;margin-top:14px">Por segurança, o Firebase não permite ver ou definir a senha de outra pessoa pela página. "Redefinir senha" envia ao colaborador um e-mail para ele criar uma nova. Para apagar o login de vez, use o console do Firebase: Authentication › Usuários › menu ⋮ › Excluir conta.</p></section>`;
   if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os ${NSUP} acessos de supervisão</h3>
-      <p class="hint" style="margin-top:-4px">Todos têm as mesmas permissões que o administrador na Supervisão, menos Colaboradores e Acessos. Os demais colaboradores só fazem tarefas e trocam prêmios.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
+      <p class="hint" style="margin-top:-4px">Cada supervisor pode cuidar de todos os times ou de um só. Quem cuida de um time só cria e aprova coisas daquele time. Só o administrador acessa Times, Colaboradores e Acessos.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
     ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
       <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
   $('#main').innerHTML = h;
@@ -723,15 +962,17 @@ function buildSup(){
 
 function fillSup(){
   const sc = (k, n) => { const el = document.getElementById('sc-' + k); if (el) el.innerHTML = n ? ` <span class="count">${n}</span>` : ''; };
-  sc('tarefas', S.subsPend.length); sc('pedidos', S.redsOpen.filter(r => r.status === 'pendente').length);
+  sc('tarefas', scopedPendSubs().length); sc('pedidos', scopedOpenReds().filter(r => r.status === 'pendente').length); sc('kudos', scopedPendKudos().length);
   sc('acessos', S.owner ? Object.values(S.players).filter(p => p.supRequest && !p.blocked && !supIds().includes(p.id)).length : 0);
   if (S.sub === 'tarefas') fillSupTasks();
   if (S.sub === 'premios') fillSupItems();
   if (S.sub === 'moedas') fillSupCoins();
   if (S.sub === 'pedidos') fillSupOrders();
+  if (S.sub === 'kudos') fillSupKudos();
   if (S.sub === 'painel') { renderKpis(); fillAudit(); }
   if (S.sub === 'mural') { const i = $('#muralInfo'); if (i) i.textContent = S.notice && S.notice.text ? `Publicado por ${nm(S.notice.by)} em ${when(S.notice.at)}.` : 'Nenhum recado publicado.'; }
-  if (S.sub === 'colab') fillColab();
+  if (S.sub === 'times') fillTeams();
+  if (S.sub === 'colab') { fillInvites(); fillColab(); }
   if (S.sub === 'acessos') fillAccess();
 }
 
@@ -739,8 +980,8 @@ function fillSup(){
 function fillPeoplePick(){
   const box = $('#tPeople'); if (!box) return;
   const sups = supIds(), q = S.tFind.toLowerCase();
-  const ps = Object.values(S.players).filter(p => !p.blocked && !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id) && nm(p.id).toLowerCase().includes(q)).sort((a, b) => nm(a.id).localeCompare(nm(b.id)));
-  box.innerHTML = ps.length ? SECS.map(k => { const g = ps.filter(p => p.sector === k); return g.length ? `<li style="border:0;padding:8px 2px 2px"><span class="sector-tag ${k}">${SECT[k].name}</span></li>` + g.map(p => `<li style="padding:6px 2px"><label class="check" style="margin:0;flex:1;cursor:pointer"><input type="checkbox" data-tsel="${p.id}" ${S.tSel.has(p.id) ? 'checked' : ''}> ${esc(nm(p.id))}</label></li>`).join('') : ''; }).join('')
+  const ps = Object.values(S.players).filter(p => !p.blocked && !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id) && inScope(p.sector) && nm(p.id).toLowerCase().includes(q)).sort((a, b) => nm(a.id).localeCompare(nm(b.id)));
+  box.innerHTML = ps.length ? teamKeys().map(k => { const g = ps.filter(p => p.sector === k); return g.length ? `<li style="border:0;padding:8px 2px 2px">${tTag(k)}</li>` + g.map(p => `<li style="padding:6px 2px"><label class="check" style="margin:0;flex:1;cursor:pointer"><input type="checkbox" data-tsel="${p.id}" ${S.tSel.has(p.id) ? 'checked' : ''}> ${esc(nm(p.id))}</label></li>`).join('') : ''; }).join('')
     : '<li class="empty">Nenhum colaborador encontrado.</li>';
   selCount();
 }
@@ -755,8 +996,8 @@ function loadProofs(list){
 function subBlock(x, pending){
   const img = proofOf(x);
   return `<div class="subitem">${img ? `<button class="proof" data-zoom="${x.id}" aria-label="Ampliar comprovação"><img src="${img}" alt=""></button>` : x.hasImage ? '<span class="proof" style="display:grid;place-items:center;font-size:11px;color:var(--muted)">carregando</span>' : '<span class="pos" aria-hidden="true">✓</span>'}
-    <div><div class="t" style="font-weight:600">${esc(nm(x.player))} · ${esc(x.taskTitle)}</div>
-    <div class="s hint" style="font-size:13px">${(SECT[x.sector] || {}).name || ''} · +${fmt(x.reward)} Unicoins · ${when(x.at)}</div>
+    <div><div class="t" style="font-weight:600">${pending ? `<label style="cursor:pointer"><input type="checkbox" data-psub="${x.id}" ${S.selSubs.has(x.id) ? 'checked' : ''} aria-label="Selecionar entrega"> ` : ''}${esc(nm(x.player))} · ${esc(x.taskTitle)}${pending ? '</label>' : ''}</div>
+    <div class="s hint" style="font-size:13px">${esc(tName(x.sector))} · +${fmt(x.reward)} Unicoins · ${when(x.at)}</div>
     ${x.note ? `<div class="note">${esc(x.note)}</div>` : ''}
     ${pending ? `<div class="row" style="margin-top:10px"><input class="in" id="r_${x.id}" data-reason="${x.id}" placeholder="Motivo, se recusar" value="${esc(S.reasons[x.id] || '')}" style="flex:2 1 160px">
       <button class="btn ok sm" style="flex:none" data-approve="${x.id}">Aprovar</button><button class="btn bad sm" style="flex:none" data-reject="${x.id}">Recusar</button></div>`
@@ -764,15 +1005,18 @@ function subBlock(x, pending){
 }
 function fillSupTasks(){
   fillPeoplePick();
-  const ts = [...S.tasks].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  $('#taskList').innerHTML = ts.length ? ts.map(t => `<li><div class="grow"><div class="t">${esc(t.title)}${t.active === false ? ' <span class="hint">(oculta)</span>' : ''}${isExpired(t) ? ' <span class="hint">(prazo encerrado)</span>' : ''}</div>
-    <div class="s">+${fmt(t.reward)} Unicoins · Para: ${esc(audLabel(t))}${t.deadlineAt ? ' · até ' + dateBR(t.deadlineAt) : ''}${t.proof ? ' · com comprovação' : ''}${t.repeat ? ' · repetível' : ''}</div></div>
-    <button class="btn ghost sm" data-tprog="${t.id}">Acompanhar</button><button class="btn ghost sm" data-tedit="${t.id}">Editar</button><button class="btn ghost sm" data-ttoggle="${t.id}">${t.active === false ? 'Mostrar' : 'Ocultar'}</button>
-    <button class="btn bad sm" data-tdel="${t.id}" ${S.confirmTDel === t.id ? 'data-confirm="1"' : ''}>${S.confirmTDel === t.id ? 'Confirmar' : 'Excluir'}</button></li>`).join('')
+  const ts = S.tasks.filter(t => inScope(t.sector) || t.sector === 'ambos').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  $('#taskList').innerHTML = ts.length ? ts.map(t => { const ed = canEdit(t.sector); return `<li><div class="grow"><div class="t">${esc(t.title)}${t.active === false ? ' <span class="hint">(oculta)</span>' : ''}${isExpired(t) ? ' <span class="hint">(prazo encerrado)</span>' : ''}</div>
+    <div class="s">+${fmt(t.reward)} Unicoins · Para: ${esc(audLabel(t))}${isRecurring(t) ? ' · ' + RECUR_LAB[t.recur].toLowerCase() : ''}${t.deadlineAt ? ' · até ' + dateBR(t.deadlineAt) : ''}${t.proof ? ' · com comprovação' : ''}${t.repeat && !isRecurring(t) ? ' · repetível' : ''}</div></div>
+    <button class="btn ghost sm" data-tprog="${t.id}">Acompanhar</button>${ed ? `<button class="btn ghost sm" data-tedit="${t.id}">Editar</button><button class="btn ghost sm" data-ttoggle="${t.id}">${t.active === false ? 'Mostrar' : 'Ocultar'}</button>
+    <button class="btn bad sm" data-tdel="${t.id}" ${S.confirmTDel === t.id ? 'data-confirm="1"' : ''}>${S.confirmTDel === t.id ? 'Confirmar' : 'Excluir'}</button>` : '<span class="hint" style="font-size:12px">só consulta</span>'}</li>`; }).join('')
     : '<li class="empty">Nenhuma tarefa ainda. Use o formulário para publicar a primeira.</li>';
   fillProgress();
-  const P = S.subsPend.slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.subs.filter(x => x.status !== 'pendente').slice(0, 30);
+  const P = scopedPendSubs().slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.subs.filter(x => x.status !== 'pendente' && inScope(x.sector)).slice(0, 30);
+  [...S.selSubs].forEach(id => { if (!P.some(x => x.id === id)) S.selSubs.delete(id); });
   loadProofs(P.concat(D.slice(0, 10)));
+  const n = S.selSubs.size;
+  $('#bulkBar').innerHTML = P.length > 1 ? `<button class="btn ghost sm" id="selAllSubs">${n === P.length ? 'Limpar seleção' : 'Selecionar todas'}</button><button class="btn ok sm" id="approveSel" ${n ? '' : 'disabled'}>Aprovar selecionadas${n ? ' (' + n + ')' : ''}</button>` : '';
   $('#subPend').innerHTML = P.length ? P.map(x => subBlock(x, true)).join('') : '<p class="empty">Nenhuma entrega aguardando conferência.</p>';
   $('#subDone').innerHTML = D.length ? D.map(x => subBlock(x, false)).join('') : '<p class="empty">As entregas aprovadas ou recusadas ficam aqui.</p>';
 }
@@ -788,47 +1032,48 @@ function fillProgress(){
   if (!t) { box.hidden = true; return; }
   box.hidden = false;
   if (S.progressSubs === null) { box.innerHTML = `<h3>${esc(t.title)}</h3><p class="hint">Carregando…</p>`; return; }
-  const aud = audiencePlayers(t);
-  const st = id => { const mine = S.progressSubs.filter(x => x.player === id); if (mine.some(x => x.status === 'aprovada')) return ['aprovada', t.repeat ? `Aprovada (${mine.filter(x => x.status === 'aprovada').length}x)` : 'Concluída']; if (mine.some(x => x.status === 'pendente')) return ['pendente', 'Em análise']; if (mine.some(x => x.status === 'recusada')) return ['recusada', 'Recusada']; return ['', isExpired(t) ? 'Não fez' : 'Não enviou']; };
+  const per = curPeriod(t), subs = S.progressSubs.filter(x => !per || x.period === per);
+  const aud = audiencePlayers(t).filter(p => inScope(p.sector));
+  const st = id => { const mine = subs.filter(x => x.player === id); if (mine.some(x => x.status === 'aprovada')) return ['aprovada', t.repeat && !per ? `Aprovada (${mine.filter(x => x.status === 'aprovada').length}x)` : 'Concluída']; if (mine.some(x => x.status === 'pendente')) return ['pendente', 'Em análise']; if (mine.some(x => x.status === 'recusada')) return ['recusada', 'Recusada']; return ['', isExpired(t) ? 'Não fez' : 'Não enviou']; };
   const rows = aud.map(p => ({ p, s:st(p.id) }));
   const okN = rows.filter(r => r.s[0] === 'aprovada').length;
   box.innerHTML = `<div class="section-head" style="margin:0 0 6px"><h3 style="margin:0">${esc(t.title)}</h3><button class="btn ghost sm" id="progClose">Fechar</button></div>
-    <p class="hint" style="margin:0;font-size:14px">${okN} de ${aud.length} concluíram · Para: ${esc(audLabel(t))}</p>
+    <p class="hint" style="margin:0;font-size:14px">${okN} de ${aud.length} concluíram${per ? (t.recur === 'semanal' ? ' esta semana' : ' este mês') : ''} · Para: ${esc(audLabel(t))}</p>
     <div class="prog">${rows.length ? rows.map(r => `<div><span>${esc(nm(r.p.id))}</span>${r.s[0] ? `<span class="status ${r.s[0]}">${r.s[1]}</span>` : `<span class="hint" style="font-size:12px">${r.s[1]}</span>`}</div>`).join('') : '<p class="empty">Ninguém cadastrado para esta tarefa ainda.</p>'}</div>`;
 }
 
 /* Prêmios */
 function fillSupItems(){
-  const items = [...S.items].sort((a, b) => (a.sector + a.cost).localeCompare(b.sector + b.cost, undefined, { numeric:true }));
+  const items = S.items.filter(i => inScope(i.sector) || i.sector === 'ambos').sort((a, b) => (a.sector + a.cost).localeCompare(b.sector + b.cost, undefined, { numeric:true }));
   $('#itemList').innerHTML = items.length ? items.map(i => {
-    const n = S.reds.filter(r => r.item === i.id && r.season === S.cfg.seasonKey && r.status !== 'recusada').length;
+    const n = S.reds.filter(r => r.item === i.id && r.season === S.cfg.seasonKey && r.status !== 'recusada').length, ed = canEdit(i.sector);
     return `<li>${safeImg(i.image) ? `<img class="mini" src="${safeImg(i.image)}" alt="">` : `<span style="font-size:24px" aria-hidden="true">${esc(i.emoji || '🎁')}</span>`}
     <div class="grow"><div class="t">${esc(i.name)}${i.active === false ? ' <span class="hint">(oculto)</span>' : ''}</div>
-    <div class="s">${fmt(i.cost)} Unicoins · ${(SECT[i.sector] || {}).name} · ${i.stock == null ? 'estoque livre' : fmt(i.stock) + ' em estoque'} · ${n} ${n === 1 ? 'resgate' : 'resgates'} na temporada</div></div>
-    <button class="btn ghost sm" data-edit="${i.id}">Editar</button><button class="btn ghost sm" data-toggle="${i.id}">${i.active === false ? 'Mostrar' : 'Ocultar'}</button>
-    <button class="btn bad sm" data-del="${i.id}" ${S.confirmDel === i.id ? 'data-confirm="1"' : ''}>${S.confirmDel === i.id ? 'Confirmar' : 'Excluir'}</button></li>`; }).join('')
+    <div class="s">${fmt(i.cost)} Unicoins · ${esc(tName(i.sector))} · ${i.stock == null ? 'estoque livre' : fmt(i.stock) + ' em estoque'} · ${n} ${n === 1 ? 'resgate' : 'resgates'} na temporada</div></div>
+    ${ed ? `<button class="btn ghost sm" data-edit="${i.id}">Editar</button><button class="btn ghost sm" data-toggle="${i.id}">${i.active === false ? 'Mostrar' : 'Ocultar'}</button>
+    <button class="btn bad sm" data-del="${i.id}" ${S.confirmDel === i.id ? 'data-confirm="1"' : ''}>${S.confirmDel === i.id ? 'Confirmar' : 'Excluir'}</button>` : '<span class="hint" style="font-size:12px">só consulta</span>'}</li>`; }).join('')
     : '<li class="empty">Nenhum prêmio cadastrado. Use o formulário para criar o primeiro.</li>';
 }
 
 /* Moedas */
 function activePlayers(){ return Object.values(S.players).filter(p => !p.blocked).sort((a, b) => nm(a.id).localeCompare(nm(b.id))); }
 function fillSupCoins(){
-  const sel = $('#cTarget'), keep = sel.value, ps = activePlayers();
-  sel.innerHTML = '<option value="">Selecione…</option>' + SECS.map(k => `<optgroup label="${SECT[k].name}">${ps.filter(p => p.sector === k).map(p => `<option value="${p.id}">${esc(nm(p.id))} — ${fmt(bal(p.id))}</option>`).join('')}</optgroup>`).join('');
+  const sel = $('#cTarget'), keep = sel.value, ps = activePlayers().filter(p => inScope(p.sector));
+  sel.innerHTML = '<option value="">Selecione…</option>' + teamKeys().filter(k => inScope(k)).map(k => { const g = ps.filter(p => p.sector === k); return g.length ? `<optgroup label="${esc(tName(k))}">${g.map(p => `<option value="${p.id}">${esc(nm(p.id))} — ${fmt(bal(p.id))}</option>`).join('')}</optgroup>` : ''; }).join('');
   sel.value = keep;
-  $('#playerList').innerHTML = ps.length ? ps.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · ganhou ${fmt(earned(p.id))} na temporada</div></div>
+  $('#playerList').innerHTML = ps.length ? ps.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${esc(tName(p.sector))} · ganhou ${fmt(earned(p.id))} na temporada</div></div>
     <span class="price" style="font-size:18px">${coin}${fmt(bal(p.id))}</span>${S.owner ? `<button class="btn bad sm" style="flex:none" data-rp="${p.id}" ${S.confirmRp === p.id ? 'data-confirm="1"' : ''}>${S.confirmRp === p.id ? 'Confirmar' : 'Zerar'}</button>` : ''}</li>`).join('')
     : '<li class="empty">Quando os colaboradores se cadastrarem, eles aparecem aqui.</li>';
-  const L = S.ledger.slice(0, 40);
+  const L = S.ledger.filter(l => !l.sector || inScope(l.sector) || inScope((S.players[l.player] || {}).sector)).slice(0, 40);
   $('#ledgerList').innerHTML = L.length ? L.map(l => ledgerLi(l, true)).join('') : '<li class="empty">Nenhuma movimentação ainda.</li>';
 }
 
 /* Pedidos */
 function fillSupOrders(){
-  const O = S.redsOpen.slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.reds.filter(r => r.status === 'entregue' || r.status === 'recusada').slice(0, 60);
+  const O = scopedOpenReds().slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.reds.filter(r => (r.status === 'entregue' || r.status === 'recusada') && inScope(r.sector)).slice(0, 60);
   $('#pendList').innerHTML = O.length ? O.map(r => `<div class="subitem"><span style="font-size:26px" aria-hidden="true">${esc(r.emoji || '🎁')}</span><div>
     <div class="t" style="font-weight:600">${esc(nm(r.player))} · ${esc(r.itemName)} <span class="status ${r.status}">${RED_LAB[r.status]}</span></div>
-    <div class="s hint" style="font-size:13px">${(SECT[r.sector] || {}).name || ''} · ${fmt(r.cost)} Unicoins · ${when(r.at)}</div>
+    <div class="s hint" style="font-size:13px">${esc(tName(r.sector))} · ${fmt(r.cost)} Unicoins · ${when(r.at)}</div>
     <div class="row" style="margin-top:10px"><input class="in" id="o_${r.id}" data-obs="${r.id}" placeholder="Observação para o colaborador (opcional)" value="${esc(S.obs[r.id] ?? r.obs ?? '')}" style="flex:2 1 200px"></div>
     <div class="row" style="margin-top:8px">${r.status === 'pendente' ? `<button class="btn ghost sm" style="flex:none" data-red="${r.id}" data-to="separacao">Em separação</button>` : ''}
       <button class="btn ok sm" style="flex:none" data-red="${r.id}" data-to="entregue">Entregue</button><button class="btn bad sm" style="flex:none" data-red="${r.id}" data-to="recusada">Recusar e estornar</button></div></div></div>`).join('')
@@ -836,6 +1081,20 @@ function fillSupOrders(){
   $('#doneList').innerHTML = D.length ? D.map(r => `<li><span style="font-size:22px" aria-hidden="true">${esc(r.emoji || '🎁')}</span><div class="grow"><div class="t">${esc(r.itemName)}</div>
     <div class="s">${esc(nm(r.player))} · ${fmt(r.cost)} Unicoins · ${when(r.doneAt || r.at)}${r.obs ? ' · ' + esc(r.obs) : ''}</div></div><span class="status ${r.status}">${RED_LAB[r.status]}</span></li>`).join('')
     : '<li class="empty">Pedidos entregues ou recusados ficam aqui.</li>';
+}
+
+/* Reconhecimentos */
+function fillSupKudos(){
+  const P = scopedPendKudos().slice().sort((a, b) => (a.at || 0) - (b.at || 0)), D = S.kudos.filter(k => k.status !== 'pendente' && inScope(k.sector)).slice(0, 40);
+  $('#kudoPend').innerHTML = P.length ? P.map(k => `<div class="subitem"><span style="font-size:26px" aria-hidden="true">💜</span><div>
+    <div class="t" style="font-weight:600">${esc(nm(k.from))} → ${esc(nm(k.to))}</div><div class="s hint" style="font-size:13px">${esc(tName(k.sector))} · ${when(k.at)}</div>
+    <div class="note">${esc(k.message)}</div>
+    <div class="row" style="margin-top:10px;align-items:center"><label class="hint" for="kb_${k.id}" style="flex:none;font-size:13px">Bônus</label><input class="in sm" id="kb_${k.id}" data-kbonus="${k.id}" type="number" min="1" step="1" value="${esc(S.bonus[k.id] ?? S.cfg.kudosBonus)}" style="flex:0 0 90px">
+      <button class="btn ok sm" style="flex:none" data-kok="${k.id}">Aprovar</button><button class="btn bad sm" style="flex:none" data-kno="${k.id}">Recusar</button></div></div></div>`).join('')
+    : '<p class="empty">Nenhum reconhecimento aguardando.</p>';
+  $('#kudoDone').innerHTML = D.length ? D.map(k => `<li><div class="grow"><div class="t">${esc(nm(k.from))} → ${esc(nm(k.to))}</div><div class="s">“${esc(k.message)}” · ${dateBR(k.at)}</div></div>
+    ${k.status === 'aprovado' ? `<span class="plus">+${fmt(k.bonus)}</span>` : ''}<span class="status ${k.status === 'aprovado' ? 'aprovada' : 'recusada'}">${KUDO_LAB[k.status]}</span></li>`).join('')
+    : '<li class="empty">Os reconhecimentos aprovados ou recusados ficam aqui.</li>';
 }
 
 /* Painel */
@@ -849,12 +1108,13 @@ async function loadKpis(){
     const ok = subs.filter(x => x.status === 'aprovada'), no = subs.filter(x => x.status === 'recusada');
     const top = (arr, key) => { const m = {}; arr.forEach(x => m[x[key]] = (m[x[key]] || 0) + 1); return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 5); };
     S.kpi = {
-      people:ps.length, bySec:SECS.map(k => ps.filter(p => p.sector === k).length + ' ' + (k === 'chat' ? 'Chat' : SECT[k].name)).join(' · '),
+      people:ps.length, bySec:activeTeams().map(k => ps.filter(p => p.sector === k).length + ' ' + tName(k)).join(' · '),
       circ:ps.reduce((s, p) => s + bal(p.id), 0), dist:ps.reduce((s, p) => s + earned(p.id), 0),
       ok:ok.length, no:no.length, pend:subs.filter(x => x.status === 'pendente').length,
       rate:ok.length + no.length ? Math.round(100 * ok.length / (ok.length + no.length)) : null,
       trocas:reds.filter(r => r.status !== 'recusada').length, abertos:reds.filter(r => r.status === 'pendente' || r.status === 'separacao').length,
       spent:reds.filter(r => r.status !== 'recusada').reduce((s, r) => s + (r.cost || 0), 0),
+      kudos:S.kudos.filter(k => k.status === 'aprovado' && (k.at || 0) >= (S.cfg.seasonStart || 0)).length,
       topTasks:top(ok, 'taskTitle'), topItems:top(reds.filter(r => r.status !== 'recusada'), 'itemName')
     };
   } catch(e) { console.error(e); S.kpi = { error:true }; }
@@ -867,24 +1127,47 @@ function renderKpis(){
   if (k.error) { box.innerHTML = '<p class="empty">Não foi possível calcular agora. Tente Atualizar.</p>'; return; }
   const card = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
   const topList = (arr, empty) => arr.length ? `<ul class="list">${arr.map(([n, c], i) => `<li><span class="pos ${i === 0 ? 'p1' : ''}">${i + 1}</span><div class="grow t">${esc(n)}</div><span class="hint">${c}x</span></li>`).join('')}</ul>` : `<p class="empty">${empty}</p>`;
-  box.innerHTML = `<div class="kpis">${card(fmt(k.people), `colaboradores ativos (${k.bySec})`)}${card(fmt(k.dist), 'moedas distribuídas')}${card(fmt(k.circ), 'moedas em circulação')}${card(fmt(k.spent), 'moedas trocadas por prêmios')}
-    ${card(fmt(k.ok), 'tarefas aprovadas')}${card(k.rate === null ? '—' : k.rate + '%', 'taxa de aprovação')}${card(fmt(k.pend), 'entregas aguardando')}${card(fmt(k.trocas), `prêmios resgatados (${k.abertos} em aberto)`)}</div>
-    <div class="cols" style="margin-top:16px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div><h3>Tarefas mais concluídas</h3>${topList(k.topTasks, 'Nenhuma tarefa aprovada ainda.')}</div>
+  box.innerHTML = `<div class="kpis">${card(fmt(k.people), `colaboradores ativos (${esc(k.bySec)})`)}${card(fmt(k.dist), 'moedas distribuídas')}${card(fmt(k.circ), 'moedas em circulação')}${card(fmt(k.spent), 'moedas trocadas por prêmios')}
+    ${card(fmt(k.ok), 'tarefas aprovadas')}${card(k.rate === null ? '—' : k.rate + '%', 'taxa de aprovação')}${card(fmt(k.pend), 'entregas aguardando')}${card(fmt(k.trocas), `prêmios resgatados (${k.abertos} em aberto)`)}${card(fmt(k.kudos), 'reconhecimentos aprovados')}</div>
+    <div class="cols two" style="margin-top:16px"><div><h3>Tarefas mais concluídas</h3>${topList(k.topTasks, 'Nenhuma tarefa aprovada ainda.')}</div>
     <div><h3>Prêmios mais trocados</h3>${topList(k.topItems, 'Nenhum prêmio trocado ainda.')}</div></div>`;
 }
 function fillAudit(){
   const box = $('#auditList'); if (!box) return;
   box.innerHTML = S.audit.length ? S.audit.map(a => `<li><div class="grow"><div class="t">${esc(a.action)}</div><div class="s">${esc(a.detail || '')}</div></div><div class="s hint" style="text-align:right;font-size:13px">${esc(a.byName || nm(a.by))}<br>${when(a.at)}</div></li>`).join('') : '<li class="empty">Nenhuma ação registrada ainda.</li>';
+  const r = $('#bkRestore');
+  if (r) r.innerHTML = S.restore ? `<div class="setup" style="margin-top:14px">Arquivo <b>${esc(S.restore.file)}</b> com ${fmt(S.restore.count)} registros, de ${when(S.restore.at)}. A restauração regrava esses registros por cima dos atuais. Registros criados depois do backup continuam existindo.
+    <div class="row" style="margin-top:10px"><button class="btn bad sm" id="bkConfirm" style="flex:none">Confirmar restauração</button><button class="btn ghost sm" id="bkCancel" style="flex:none">Cancelar</button></div></div>` : '';
 }
 
-/* Colaboradores (administrador) */
+/* Times (administrador) */
+function fillTeams(){
+  const counts = {}; Object.values(S.players).forEach(p => { if (!p.blocked) counts[p.sector] = (counts[p.sector] || 0) + 1; });
+  $('#teamList').innerHTML = teamKeys().map(k => { const t = S.teams[k], d = S.teamDraft[k] || {}, color = d.color ?? t.color, off = t.active === false;
+    return `<li style="flex-wrap:wrap;${off ? 'opacity:.6' : ''}"><div class="grow" style="min-width:200px"><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="in sm" id="tn_${esc(k)}" data-tname="${esc(k)}" value="${esc(d.name ?? t.name)}" maxlength="40" aria-label="Nome do time" style="flex:1 1 140px"></div>
+      <div class="swatches" style="margin-top:8px">${[...Array(PALETTE).keys()].map(c => `<button type="button" class="swatch" data-tcolor="${esc(k)}" data-c="${c}" aria-pressed="${+color === c}" aria-label="Cor ${c + 1}" style="background:var(--p${c})"></button>`).join('')}</div>
+      <div class="s" style="margin-top:6px">${counts[k] || 0} ${counts[k] === 1 ? 'pessoa' : 'pessoas'}${off ? ' · desativado' : ''}</div></div>
+      <button class="btn ghost sm" style="flex:none" data-tsave="${esc(k)}">Salvar</button>
+      <button class="btn ${off ? 'ok' : 'bad'} sm" style="flex:none" data-tactive="${esc(k)}">${off ? 'Reativar' : 'Desativar'}</button></li>`; }).join('');
+}
+
+/* Colaboradores autorizados (administrador) */
+function fillInvites(){
+  const emails = new Set(Object.values(S.players).map(p => lowerEmail(p.email)));
+  const done = S.invites.filter(i => emails.has(lowerEmail(i.email))).length;
+  $('#invCount').textContent = S.invites.length ? `${S.invites.length} na lista · ${done} já ${done === 1 ? 'entrou' : 'entraram'}` : '';
+  $('#invList').innerHTML = S.invites.length ? S.invites.map(i => `<li><div class="grow"><div class="t">${esc(i.name)}</div><div class="s">${esc(i.email)} · ${esc(tName(i.sector))}</div></div>
+    <span class="status ${emails.has(lowerEmail(i.email)) ? 'aprovada' : 'pendente'}">${emails.has(lowerEmail(i.email)) ? 'Cadastrado' : 'Aguardando'}</span>
+    <button class="btn bad sm" style="flex:none" data-invdel="${esc(i.id)}" ${S.confirmInv === i.id ? 'data-confirm="1"' : ''}>${S.confirmInv === i.id ? 'Confirmar' : 'Remover'}</button></li>`).join('')
+    : '<li class="empty">Nenhum e-mail na lista. Adicione um por um ou importe uma planilha.</li>';
+}
 function fillColab(){
   const q = S.pFind.toLowerCase(), sups = supIds();
   const ps = Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id) && (nm(p.id).toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q))).sort((a, b) => (!!a.blocked - !!b.blocked) || nm(a.id).localeCompare(nm(b.id)));
   $('#colabList').innerHTML = ps.length ? ps.map(p => `<li style="flex-wrap:wrap">
     <div class="grow" style="min-width:200px"><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="in sm" data-cname="${p.id}" id="cn_${p.id}" value="${esc(S.names[p.id] ?? p.name ?? '')}" maxlength="60" aria-label="Nome" style="flex:1 1 140px"><button class="btn ghost sm" style="flex:none" data-rename="${p.id}">Salvar</button></div>
       <div class="s" style="margin-top:4px">${esc(p.email || 'e-mail ainda não registrado')}${sups.includes(p.id) ? '<span class="tag-role">Supervisão</span>' : ''}${p.blocked ? '<span class="tag-role blocked">Removido</span>' : ''} · saldo ${fmt(bal(p.id))}</div></div>
-    <select class="in sm" style="width:auto;flex:none" data-move="${p.id}" aria-label="Time de ${esc(nm(p.id))}">${SECS.map(k => `<option value="${k}" ${p.sector === k ? 'selected' : ''}>${SECT[k].name}</option>`).join('')}</select>
+    <select class="in sm" style="width:auto;flex:none" data-move="${p.id}" aria-label="Time de ${esc(nm(p.id))}">${teamOptions(teamKeys().filter(k => S.teams[k].active !== false || k === p.sector), p.sector)}</select>
     <button class="btn ghost sm" style="flex:none" data-pwd="${p.id}" ${p.email ? '' : 'disabled'}>Redefinir senha</button>
     <button class="btn ${p.blocked ? 'ok' : 'bad'} sm" style="flex:none" data-block="${p.id}" ${S.confirmBlock === p.id ? 'data-confirm="1"' : ''}>${S.confirmBlock === p.id ? 'Confirmar' : p.blocked ? 'Reativar' : 'Remover acesso'}</button></li>`).join('')
     : '<li class="empty">Nenhum colaborador encontrado.</li>';
@@ -892,29 +1175,39 @@ function fillColab(){
 
 /* Acessos */
 function fillAccess(){
-  $('#slots').innerHTML = [...Array(NSUP).keys()].map(i => { const id = S.cfg.supervisors[i];
-    return `<div class="slot"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow">${id ? `<b>${esc(nm(id))}</b>` : '<span class="hint">Acesso livre</span>'}</div>
-    ${id && S.owner ? `<button class="btn bad sm" data-unslot="${i}">Remover</button>` : ''}</div>`; }).join('');
+  $('#slots').innerHTML = [...Array(NSUP).keys()].map(i => { const id = S.cfg.supervisors[i], scope = id ? ((S.cfg.supScope || {})[id] || 'all') : 'all';
+    return `<div class="slot" style="flex-wrap:wrap"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow" style="min-width:140px">${id ? `<b>${esc(nm(id))}</b>` : '<span class="hint">Acesso livre</span>'}</div>
+    ${id ? (S.owner ? `<select class="in sm" style="width:auto;flex:none" data-scope="${id}" aria-label="Times de ${esc(nm(id))}"><option value="all" ${scope === 'all' ? 'selected' : ''}>Todos os times</option>${teamOptions(teamKeys().filter(k => S.teams[k].active !== false || k === scope), scope)}</select><button class="btn bad sm" style="flex:none" data-unslot="${i}">Remover</button>` : `<span class="hint" style="font-size:13px">${scope === 'all' ? 'Todos os times' : esc(tName(scope))}</span>`) : ''}</div>`; }).join('');
   if (!S.owner) return;
   const sups = supIds(), all = activePlayers();
   const reqs = all.filter(p => p.supRequest && !sups.includes(p.id));
-  $('#reqList').innerHTML = reqs.length ? reqs.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · pediu acesso de supervisão</div></div>
+  $('#reqList').innerHTML = reqs.length ? reqs.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${esc(tName(p.sector))} · pediu acesso de supervisão</div></div>
     <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
   const others = all.filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id));
-  $('#peopleList').innerHTML = others.length ? others.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[...Array(NSUP).keys()].map(i => `<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
+  $('#peopleList').innerHTML = others.length ? others.map(p => `<li style="flex-wrap:wrap"><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${esc(tName(p.sector))}</div></div><div class="row" style="gap:6px;flex:none">${[...Array(NSUP).keys()].map(i => `<button class="btn ghost sm" style="flex:none" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</div></li>`).join('') : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
 }
 
 /* ---------- Ações ---------- */
+function errMsg(e){
+  return e && e.code === 'permission-denied' ? 'O banco não permitiu esta ação para o seu acesso.' : e && e.code === 'resource-exhausted' ? 'Limite diário do plano gratuito do Firebase atingido. Tente amanhã.' : e && e.code === 'failed-precondition' ? 'Muita gente mexendo nisso agora. Tente de novo em alguns segundos.' : e && e.code === 'unavailable' ? 'Sem conexão com o banco. Verifique a internet.' : 'Não foi possível salvar. Tente de novo em instantes.';
+}
 async function guard(fn){
   if (S.busy) return; S.busy = true;
   try { await fn(); }
-  catch(e){ console.error(e); toast(e && e.code === 'permission-denied' ? 'O banco não permitiu esta ação para o seu acesso.' : e && e.code === 'resource-exhausted' ? 'Limite diário do plano gratuito do Firebase atingido. Tente amanhã.' : e && e.code === 'failed-precondition' ? 'Muita gente mexendo nisso agora. Tente de novo em alguns segundos.' : e && e.code === 'unavailable' ? 'Sem conexão com o banco. Verifique a internet.' : 'Não foi possível salvar. Tente de novo em instantes.'); }
+  catch(e){ console.error(e); toast(errMsg(e)); }
   finally { S.busy = false; }
 }
+const secOf = pid => (S.players[pid] || {}).sector || '';
 
-async function join(name, sector, wantSup){ await guard(async () => {
-  await setDoc(doc(fdb, 'players', S.me), { name, sector, supRequest:!!wantSup, balance:0, earned:0, joinedAt:now(), email:S.email });
-  S.tab = 'loja'; toast('Bem-vindo ao Unicoins!'); }); }
+async function join(name, sector, wantSup, fromInvite){ await guard(async () => {
+  try {
+    await setDoc(doc(fdb, 'players', S.me), { name, sector, supRequest:!!wantSup, balance:0, earned:0, joinedAt:now(), email:S.email });
+    S.tab = 'loja'; toast(fromInvite ? `Bem-vindo! Você entrou no time ${tName(sector)}.` : 'Bem-vindo ao Unicoins!');
+  } catch(e) {
+    if (fromInvite) { S.invite = null; lastShape = ''; changed(); }
+    throw e;
+  }
+}); }
 
 async function buy(id){ await guard(async () => {
   const p = me(); if (!p) return;
@@ -927,7 +1220,7 @@ async function buy(id){ await guard(async () => {
     if (!is.exists() || is.data().active !== true) return 'Este prêmio saiu da loja.';
     if (rs.exists() && rs.data().status !== 'recusada') return 'Você já resgatou este prêmio nesta temporada.';
     const it = is.data(), pl = ps.data(), b = pl.balance || 0;
-    if (it.sector !== 'ambos' && it.sector !== pl.sector) return 'Este prêmio não é do seu setor.';
+    if (it.sector !== 'ambos' && it.sector !== pl.sector) return 'Este prêmio não é do seu time.';
     if (b < it.cost) return 'Saldo insuficiente.';
     if (it.stock !== null && it.stock !== undefined && it.stock <= 0) return 'Este prêmio acabou de esgotar.';
     const t = now();
@@ -937,8 +1230,10 @@ async function buy(id){ await guard(async () => {
     tx.set(doc(collection(fdb, 'ledger')), { player:S.me, amount:-it.cost, kind:'redeem', reason:'Troca: ' + it.name, by:S.me, at:t, ref:rid });
     return null;
   });
-  S.confirmId = null; fillStore();
-  toast(res || 'Troca feita! Acompanhe a entrega em Meus resgates.'); }); }
+  S.confirmId = null;
+  if (!res && p.wish === id) updateDoc(doc(fdb, 'players', S.me), { wish:null }).catch(() => {});
+  fillStore();
+  toast(res || 'Troca feita! Acompanhe a entrega em Meu perfil.'); }); }
 
 async function adjust(pid, amount, reason, kind){
   return runTransaction(fdb, async tx => {
@@ -949,16 +1244,16 @@ async function adjust(pid, amount, reason, kind){
     if (!real) return 0;
     const k = kind || (real > 0 ? 'credit' : 'debit');
     tx.update(r, isEarnKind(k) ? { balance:b + real, earned:(s.data().earned || 0) + real } : { balance:b + real });
-    tx.set(doc(collection(fdb, 'ledger')), { player:pid, amount:real, kind:k, reason, by:S.me, at:now() });
+    tx.set(doc(collection(fdb, 'ledger')), { player:pid, sector:s.data().sector || '', amount:real, kind:k, reason, by:S.me, at:now() });
     return real;
   });
 }
-async function bulkCredit(ids, amt, why){
+async function bulkCredit(ids, amt, why, sector){
   for (let i = 0; i < ids.length; i += 200) {
     const batch = writeBatch(fdb), t = now();
     ids.slice(i, i + 200).forEach(pid => {
       batch.update(doc(fdb, 'players', pid), { balance:increment(amt), earned:increment(amt) });
-      batch.set(doc(collection(fdb, 'ledger')), { player:pid, amount:amt, kind:'bulk', reason:why, by:S.me, at:t });
+      batch.set(doc(collection(fdb, 'ledger')), { player:pid, sector, amount:amt, kind:'bulk', reason:why, by:S.me, at:t });
     });
     await batch.commit();
   }
@@ -969,7 +1264,7 @@ async function resetPlayers(ids, reason){
     const batch = writeBatch(fdb), t = now();
     targets.slice(i, i + 200).forEach(p => {
       batch.update(doc(fdb, 'players', p.id), { balance:0, earned:0 });
-      if (p.balance) batch.set(doc(collection(fdb, 'ledger')), { player:p.id, amount:-(p.balance || 0), kind:'reset', reason:reason || 'Moedas zeradas pela supervisão', by:S.me, at:t });
+      if (p.balance) batch.set(doc(collection(fdb, 'ledger')), { player:p.id, sector:p.sector || '', amount:-(p.balance || 0), kind:'reset', reason:reason || 'Moedas zeradas pela supervisão', by:S.me, at:t });
     });
     await batch.commit();
   }
@@ -979,9 +1274,9 @@ async function endSeason(){ await guard(async () => {
   const key = S.cfg.seasonKey || 'S1', n = parseInt(key.slice(1), 10) || 1;
   const curName = S.cfg.seasonName || 'Temporada ' + n;
   const nextName = ($('#nextSeason') && $('#nextSeason').value.trim()) || 'Temporada ' + (n + 1);
-  const ranking = {};
-  SECS.forEach(k => { ranking[k] = activePlayers().filter(p => p.sector === k && earned(p.id) > 0).sort((a, b) => earned(b.id) - earned(a.id)).slice(0, 10).map(p => ({ name:nm(p.id), earned:earned(p.id) })); });
-  await setDoc(doc(fdb, 'seasons', key), { key, name:curName, startedAt:S.cfg.seasonStart || 0, endedAt:now(), ranking });
+  const ranking = {}, sups = supIds();
+  teamKeys().forEach(k => { ranking[k] = activePlayers().filter(p => p.sector === k && !sups.includes(p.id) && earned(p.id) > 0).sort((a, b) => earned(b.id) - earned(a.id)).slice(0, 10).map(p => ({ id:p.id, name:nm(p.id), earned:earned(p.id) })); });
+  await setDoc(doc(fdb, 'seasons', key), { key, name:curName, startedAt:S.cfg.seasonStart || 0, endedAt:now(), ranking, teams:calcTeamScores() });
   await resetPlayers(Object.keys(S.players), 'Fim da ' + curName);
   await cfgWrite({ seasonKey:'S' + (n + 1), seasonName:nextName, seasonStart:now() });
   audit('Encerrou temporada', `${curName} encerrada; início da ${nextName}`);
@@ -999,7 +1294,7 @@ async function settle(rid, to){ await guard(async () => {
       const ps = await tx.get(pRef), is = await tx.get(iRef);
       if (ps.exists()) tx.update(pRef, { balance:(ps.data().balance || 0) + r.cost });
       if (is.exists() && is.data().stock !== null && is.data().stock !== undefined) tx.update(iRef, { stock:is.data().stock + 1 });
-      tx.set(doc(collection(fdb, 'ledger')), { player:r.player, amount:r.cost, kind:'refund', reason:'Estorno: ' + r.itemName, by:S.me, at:now() });
+      tx.set(doc(collection(fdb, 'ledger')), { player:r.player, sector:r.sector || '', amount:r.cost, kind:'refund', reason:'Estorno: ' + r.itemName, by:S.me, at:now() });
     }
     tx.update(rRef, { status:to, obs, doneBy:S.me, doneAt:now() });
     return { separacao:'Pedido marcado como em separação.', entregue:'Pedido marcado como entregue.', recusada:'Pedido recusado e Unicoins devolvidos.' }[to] + '|' + nm(r.player) + ' · ' + r.itemName;
@@ -1008,7 +1303,7 @@ async function settle(rid, to){ await guard(async () => {
   if (det) { audit({ separacao:'Pedido em separação', entregue:'Pedido entregue', recusada:'Pedido recusado e estornado' }[to], det); delete S.obs[rid]; }
   toast(m); }); }
 
-async function decide(id, ok){ await guard(async () => {
+async function decideOne(id, ok){
   const reason = ok ? '' : (S.reasons[id] || '').trim().slice(0, 200);
   const msg = await runTransaction(fdb, async tx => {
     const sRef = doc(fdb, 'submissions', id), ss = await tx.get(sRef);
@@ -1019,14 +1314,43 @@ async function decide(id, ok){ await guard(async () => {
     if (ok && ps.exists()) {
       const p = ps.data();
       tx.update(pRef, { balance:(p.balance || 0) + x.reward, earned:(p.earned || 0) + x.reward });
-      tx.set(doc(fdb, 'ledger', 'task_' + id), { player:x.player, amount:x.reward, kind:'task', reason:'Tarefa: ' + x.taskTitle, by:S.me, at:now() });
+      tx.set(doc(fdb, 'ledger', 'task_' + id), { player:x.player, sector:x.sector || '', amount:x.reward, kind:'task', reason:'Tarefa: ' + x.taskTitle, by:S.me, at:now() });
     }
     tx.update(sRef, { status:ok ? 'aprovada' : 'recusada', reason, doneBy:S.me, doneAt:now() });
     return (ok ? `${fmt(x.reward)} Unicoins creditados para ${nm(x.player)}.` : 'Entrega recusada.') + '|' + nm(x.player) + ' · ' + x.taskTitle;
   });
   const [m, det] = String(msg).split('|');
   if (det) audit(ok ? 'Aprovou entrega' : 'Recusou entrega', det + (reason ? ' · ' + reason : ''));
-  delete S.reasons[id]; toast(m); }); }
+  delete S.reasons[id]; S.selSubs.delete(id);
+  return { m, done:!!det };
+}
+async function decide(id, ok){ await guard(async () => { toast((await decideOne(id, ok)).m); }); }
+async function decideMany(ids){ await guard(async () => {
+  let n = 0, fail = 0;
+  for (const id of ids) { try { if ((await decideOne(id, true)).done) n++; } catch(e) { console.error(e); fail++; } }
+  S.selSubs = new Set();
+  toast(`${n} ${n === 1 ? 'entrega aprovada' : 'entregas aprovadas'}${fail ? ` · ${fail} não ${fail === 1 ? 'pôde' : 'puderam'} ser aprovada${fail === 1 ? '' : 's'}` : ''}.`);
+}); }
+
+async function decideKudos(id, ok){ await guard(async () => {
+  const bonus = Math.max(1, parseInt(S.bonus[id] ?? S.cfg.kudosBonus, 10) || S.cfg.kudosBonus);
+  const msg = await runTransaction(fdb, async tx => {
+    const kRef = doc(fdb, 'kudos', id), ks = await tx.get(kRef);
+    const k = ks.exists() && ks.data();
+    if (!k || k.status !== 'pendente') return 'Este reconhecimento já foi analisado por outra pessoa da supervisão.';
+    if (ok) {
+      const pRef = doc(fdb, 'players', k.to), ps = await tx.get(pRef);
+      if (ps.exists()) {
+        tx.update(pRef, { balance:(ps.data().balance || 0) + bonus, earned:(ps.data().earned || 0) + bonus });
+        tx.set(doc(fdb, 'ledger', 'kudos_' + id), { player:k.to, sector:k.sector || '', amount:bonus, kind:'kudos', reason:'Reconhecimento de ' + nm(k.from), by:S.me, at:now() });
+      }
+    }
+    tx.update(kRef, ok ? { status:'aprovado', bonus, doneBy:S.me, doneAt:now() } : { status:'recusado', doneBy:S.me, doneAt:now() });
+    return (ok ? `${nm(k.to)} ganhou ${fmt(bonus)} Unicoins pelo reconhecimento.` : 'Reconhecimento recusado.') + '|' + nm(k.from) + ' → ' + nm(k.to);
+  });
+  const [m, det] = String(msg).split('|');
+  if (det) audit(ok ? 'Aprovou reconhecimento' : 'Recusou reconhecimento', det + (ok ? ` · +${bonus}` : ''));
+  delete S.bonus[id]; toast(m); }); }
 
 /* ---------- Formulários da supervisão ---------- */
 function setThumb(){ const t = $('#fThumb'); if (!t) return; const v = safeImg(S.formImg); t.innerHTML = v ? `<img src="${v}" alt="Imagem do prêmio">` : 'Sem imagem'; $('#fImgDel').hidden = !v; }
@@ -1040,36 +1364,106 @@ function editItem(id){ const i = S.items.find(x => x.id === id); if (!i) return;
   $('#fEmoji').value = i.emoji || '🎁'; $('#fName').value = i.name; $('#fDesc').value = i.desc || ''; $('#fCost').value = i.cost; $('#fStock').value = i.stock ?? ''; $('#fSector').value = i.sector; $('#fActive').checked = i.active !== false; S.formImg = safeImg(i.image); setThumb();
   $('#formTitle').textContent = 'Editar prêmio'; $('#fSave').textContent = 'Salvar alterações'; $('#fCancel').hidden = false; $('#fName').focus(); }
 function setTMode(m){ S.tMode = m; document.querySelectorAll('[data-tmode]').forEach(b => b.setAttribute('aria-current', b.dataset.tmode === m)); $('#tModeSetor').hidden = m === 'pessoas'; $('#tModePessoas').hidden = m !== 'pessoas'; fillPeoplePick(); }
-function resetTaskForm(){ S.editingTask = null; S.tSel = new Set(); S.tFind = ''; $('#taskForm').reset(); $('#tFind').value = ''; setTMode('setor'); $('#tActive').checked = true; $('#tFormTitle').textContent = 'Nova tarefa'; $('#tSave').textContent = 'Publicar tarefa'; $('#tCancel').hidden = true; }
+function syncRecur(){ const r = $('#tRecur'), box = $('#tRepeatBox'); if (r && box) { box.hidden = !!r.value; if (r.value) $('#tRepeat').checked = false; } }
+function resetTaskForm(){ S.editingTask = null; S.tSel = new Set(); S.tFind = ''; $('#taskForm').reset(); $('#tFind').value = ''; setTMode('setor'); syncRecur(); $('#tActive').checked = true; $('#tFormTitle').textContent = 'Nova tarefa'; $('#tSave').textContent = 'Publicar tarefa'; $('#tCancel').hidden = true; }
 const toDateInput = ms => { if (!ms) return ''; const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 function editTask(id){ const t = S.tasks.find(x => x.id === id); if (!t) return; S.editingTask = id;
-  $('#tTitle').value = t.title; $('#tDesc').value = t.desc || ''; $('#tReward').value = t.reward; $('#tDeadline').value = toDateInput(t.deadlineAt); $('#tSector').value = t.sector;
+  $('#tTitle').value = t.title; $('#tDesc').value = t.desc || ''; $('#tReward').value = t.reward; $('#tDeadline').value = toDateInput(t.deadlineAt); $('#tRecur').value = isRecurring(t) ? t.recur : ''; $('#tSector').value = t.sector;
   S.tSel = new Set(audOf(t).filter(x => x.startsWith('uid:')).map(x => x.slice(4))); S.tFind = ''; $('#tFind').value = ''; setTMode(isIndividual(t) ? 'pessoas' : 'setor');
-  $('#tProof').checked = !!t.proof; $('#tRepeat').checked = !!t.repeat; $('#tActive').checked = t.active !== false;
+  $('#tProof').checked = !!t.proof; $('#tRepeat').checked = !!t.repeat; $('#tActive').checked = t.active !== false; syncRecur();
   $('#tFormTitle').textContent = 'Editar tarefa'; $('#tSave').textContent = 'Salvar alterações'; $('#tCancel').hidden = false; $('#tTitle').focus(); }
 function zoom(src){ const d = document.createElement('div'); d.className = 'lb'; d.setAttribute('role', 'dialog'); d.innerHTML = `<img src="${src}" alt="Comprovação ampliada">`;
   const close = () => { d.remove(); document.removeEventListener('keydown', k); }; const k = e => { if (e.key === 'Escape') close(); };
   d.addEventListener('click', close); document.addEventListener('keydown', k); document.body.appendChild(d); }
 
-/* ---------- Exportação (CSV para Excel) ---------- */
+/* ---------- Arquivos (CSV para Excel, backup) ---------- */
+function downloadBlob(name, blob){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
 function downloadCSV(name, header, rows){
   const cell = v => { const s = String(v ?? ''); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const csv = '\ufeff' + [header, ...rows].map(r => r.map(cell).join(';')).join('\r\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
-  a.download = `unicoins-${name}-${toDateInput(now())}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  const csv = '﻿' + [header, ...rows].map(r => r.map(cell).join(';')).join('\r\n');
+  downloadBlob(`unicoins-${name}-${toDateInput(now())}.csv`, new Blob([csv], { type:'text/csv;charset=utf-8' }));
 }
-const KIND = { credit:'Crédito', debit:'Débito', bulk:'Crédito do setor', task:'Tarefa aprovada', redeem:'Troca de prêmio', refund:'Estorno', reset:'Zeramento' };
-const secName = k => (SECT[k] || {}).name || '';
+function parseCSV(text){
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '', delim = (first.match(/;/g) || []).length >= (first.match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows.map(r => r.map(x => x.trim())).filter(r => r.some(Boolean));
+}
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+function matchTeam(v){
+  const n = norm(v); if (!n) return null;
+  return teamKeys().find(k => norm(k) === n || norm(tName(k)) === n) || teamKeys().find(k => norm(tName(k)).startsWith(n) || n.startsWith(norm(tName(k)).split(' ')[0])) || null;
+}
+const validEmail = e => /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/.test(e);
+async function importInvites(file){ await guard(async () => {
+  const rows = parseCSV(await file.text());
+  if (rows.length && /mail/i.test(rows[0].join(' '))) rows.shift();
+  const ok = [], bad = [];
+  rows.forEach((r, i) => {
+    const [name, email, team] = r, k = matchTeam(team), em = lowerEmail(email);
+    if (!name || name.length < 3 || !validEmail(em) || !k) bad.push(i + 2); else ok.push({ name:name.replace(/\s+/g, ' ').slice(0, 60), email:em, sector:k });
+  });
+  for (let i = 0; i < ok.length; i += 400) {
+    const batch = writeBatch(fdb), t = now();
+    ok.slice(i, i + 400).forEach(x => batch.set(doc(fdb, 'invites', x.email), { ...x, by:S.me, at:t }));
+    await batch.commit();
+  }
+  if (ok.length) audit('Importou lista de autorizados', `${ok.length} e-mails`);
+  toast(`${ok.length} ${ok.length === 1 ? 'pessoa adicionada' : 'pessoas adicionadas'} à lista.${bad.length ? ` Linhas ignoradas (nome, e-mail ou time inválido): ${bad.slice(0, 8).join(', ')}${bad.length > 8 ? '…' : ''}.` : ''}`);
+}); }
+
+const KIND = { credit:'Crédito', debit:'Débito', bulk:'Crédito do time', task:'Tarefa aprovada', redeem:'Troca de prêmio', refund:'Estorno', reset:'Zeramento', kudos:'Reconhecimento' };
 async function exportData(kind){ await guard(async () => {
   const seasons = Object.fromEntries(S.seasons.map(s => [s.key || s.id, s.name])); seasons[S.cfg.seasonKey] = seasonLabel();
-  const pl = id => S.players[id] || {};
   if (kind === 'colab') return downloadCSV('colaboradores', ['Nome', 'E-mail', 'Time', 'Saldo', 'Ganho na temporada', 'Situação', 'Cadastro'],
-    Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id)).map(p => [nm(p.id), p.email || '', secName(p.sector), bal(p.id), earned(p.id), p.blocked ? 'Removido' : supIds().includes(p.id) ? 'Supervisão' : 'Ativo', dateBR(p.joinedAt)]));
+    Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id)).map(p => [nm(p.id), p.email || '', tName(p.sector), bal(p.id), earned(p.id), p.blocked ? 'Removido' : supIds().includes(p.id) ? 'Supervisão' : 'Ativo', dateBR(p.joinedAt)]));
   const rows = (await getDocs(collection(fdb, { extrato:'ledger', trocas:'redemptions', entregas:'submissions' }[kind]))).docs.map(d => d.data()).sort(byAtDesc);
-  if (kind === 'extrato') downloadCSV('extrato', ['Data', 'Colaborador', 'Time', 'Movimento', 'Tipo', 'Valor', 'Feito por'], rows.map(l => [when(l.at), nm(l.player), secName(pl(l.player).sector), l.reason || '', KIND[l.kind] || l.kind || '', l.amount, nm(l.by)]));
-  if (kind === 'trocas') downloadCSV('trocas', ['Data', 'Colaborador', 'Time', 'Prêmio', 'Custo', 'Status', 'Temporada', 'Observação', 'Resolvido por', 'Resolvido em'], rows.map(r => [when(r.at), nm(r.player), secName(r.sector), r.itemName, r.cost, RED_LAB[r.status] || r.status, seasons[r.season] || r.season || '', r.obs || '', r.doneBy ? nm(r.doneBy) : '', when(r.doneAt)]));
-  if (kind === 'entregas') downloadCSV('entregas', ['Data', 'Colaborador', 'Time', 'Tarefa', 'Recompensa', 'Status', 'Motivo da recusa', 'Observação do colaborador', 'Conferido por', 'Conferido em'], rows.map(x => [when(x.at), nm(x.player), secName(x.sector), x.taskTitle, x.reward, SUB_LAB[x.status] || x.status, x.reason || '', x.note || '', x.doneBy ? nm(x.doneBy) : '', when(x.doneAt)]));
+  if (kind === 'extrato') downloadCSV('extrato', ['Data', 'Colaborador', 'Time', 'Movimento', 'Tipo', 'Valor', 'Feito por'], rows.map(l => [when(l.at), nm(l.player), tName(l.sector || secOf(l.player)), l.reason || '', KIND[l.kind] || l.kind || '', l.amount, nm(l.by)]));
+  if (kind === 'trocas') downloadCSV('trocas', ['Data', 'Colaborador', 'Time', 'Prêmio', 'Custo', 'Status', 'Temporada', 'Observação', 'Resolvido por', 'Resolvido em'], rows.map(r => [when(r.at), nm(r.player), tName(r.sector), r.itemName, r.cost, RED_LAB[r.status] || r.status, seasons[r.season] || r.season || '', r.obs || '', r.doneBy ? nm(r.doneBy) : '', when(r.doneAt)]));
+  if (kind === 'entregas') downloadCSV('entregas', ['Data', 'Colaborador', 'Time', 'Tarefa', 'Recompensa', 'Status', 'Motivo da recusa', 'Observação do colaborador', 'Conferido por', 'Conferido em'], rows.map(x => [when(x.at), nm(x.player), tName(x.sector), x.taskTitle, x.reward, SUB_LAB[x.status] || x.status, x.reason || '', x.note || '', x.doneBy ? nm(x.doneBy) : '', when(x.doneAt)]));
   toast('Planilha baixada.'); }); }
+
+const BK_COLS = ['players', 'items', 'tasks', 'redemptions', 'ledger', 'submissions', 'kudos', 'invites', 'seasons', 'audit', 'proofs'];
+const BK_CFG = ['main', 'teams', 'notice', 'teamScores'];
+async function backupDownload(){ await guard(async () => {
+  const withImg = $('#bkImages') && $('#bkImages').checked, data = {};
+  for (const c of BK_CFG) { const s = await getDoc(doc(fdb, 'config', c)); if (s.exists()) data['config/' + c] = s.data(); }
+  for (const c of BK_COLS) { if (c === 'proofs' && !withImg) continue; (await getDocs(collection(fdb, c))).docs.forEach(d => data[c + '/' + d.id] = d.data()); }
+  const n = Object.keys(data).length;
+  downloadBlob(`unicoins-backup-${toDateInput(now())}.json`, new Blob([JSON.stringify({ app:'unicoins', version:3, exportedAt:now(), count:n, data })], { type:'application/json' }));
+  audit('Baixou backup', `${n} registros${withImg ? ' com imagens' : ''}`); toast(`Backup baixado com ${fmt(n)} registros.`);
+}); }
+async function backupRead(file){
+  try {
+    const j = JSON.parse(await file.text());
+    if (!j || j.app !== 'unicoins' || typeof j.data !== 'object') throw new Error('formato');
+    const ok = Object.keys(j.data).filter(k => { const [c, id, extra] = k.split('/'); return !extra && id && (c === 'config' ? BK_CFG.includes(id) : BK_COLS.includes(c)) && j.data[k] && typeof j.data[k] === 'object'; });
+    if (!ok.length) throw new Error('vazio');
+    S.restore = { file:file.name, at:j.exportedAt, count:ok.length, keys:ok, data:j.data }; fillAudit();
+  } catch(e) { S.restore = null; toast('Este arquivo não é um backup válido do Unicoins.'); fillAudit(); }
+}
+async function backupRestore(){ await guard(async () => {
+  const r = S.restore; if (!r) return;
+  for (let i = 0; i < r.keys.length; i += 400) {
+    const batch = writeBatch(fdb);
+    r.keys.slice(i, i + 400).forEach(k => { const [c, id] = k.split('/'); batch.set(doc(fdb, c, id), r.data[k]); });
+    await batch.commit();
+  }
+  audit('Restaurou backup', `${r.count} registros de ${when(r.at)}`);
+  S.restore = null; fillAudit(); toast(`Backup restaurado: ${fmt(r.count)} registros.`);
+}); }
 
 /* ---------- Eventos ---------- */
 function twoStep(key, id, refill){ S[key] = id; refill(); setTimeout(() => { if (S[key] === id) { S[key] = null; refill(); } }, 5000); }
@@ -1077,17 +1471,19 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
   if (b.id === 'logout') { if (auth) await signOut(auth); return; }
+  if (b.id === 'installBtn') { if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch(_) {} installEvt = null; b.hidden = true; } return; }
   if (b.id === 'copyUid') { try { await navigator.clipboard.writeText(S.me); toast('UID copiado.'); } catch(_) { toast('Selecione e copie o UID manualmente.'); } return; }
   if (b.id === 'google') { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(err) { if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') toast(authMsg(err)); } return; }
   if (b.id === 'forgot') { const em = ($('#lEmail').value || '').trim(); if (!em) return toast('Digite seu e-mail no campo acima.');
     try { await sendPasswordResetEmail(auth, em); toast('Se existir conta, enviamos o link de nova senha para ' + em + '.'); } catch(err) { toast(authMsg(err)); } return; }
-  if (b.id === 'viewBtn') { S.viewAs = (me() && me().sector) || 'fin'; S.tab = 'loja'; S.openTask = null; window.scrollTo(0, 0); return build(); }
+  if (b.id === 'viewBtn') { S.viewAs = myScope() !== 'all' ? myScope() : (me() && me().sector) || activeTeams()[0]; S.tab = 'loja'; S.openTask = null; window.scrollTo(0, 0); return build(); }
   if (d.viewas) { S.viewAs = d.viewas; return build(); }
   if (b.id === 'exitView') { S.viewAs = null; S.tab = 'sup'; return build(); }
   if (d.tab) { S.tab = d.tab; S.confirmId = null; if (d.tab !== 'tarefas') S.openTask = null; return build(); }
   if (d.sub) { if (S.sub !== d.sub) closeProgress(); S.sub = d.sub; return build(); }
   if (d.pick) { S.joinSector = d.pick; document.querySelectorAll('[data-pick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.pick === d.pick)); return; }
   if (d.prev) { S.preview = d.prev; return fill(); }
+  if (d.wish !== undefined) return guard(async () => { await updateDoc(doc(fdb, 'players', S.me), { wish:d.wish || null }); toast(d.wish ? 'Meta definida! Acompanhe o progresso no topo da loja.' : 'Meta removida.'); });
   if (d.buy) { if (d.confirm) return buy(d.buy); S.confirmId = d.buy; fillStore(); setTimeout(() => { if (S.confirmId === d.buy) { S.confirmId = null; if (S.tab === 'loja') fillStore(); } }, 5000); return; }
   if (d.open) { S.openTask = d.open; S.draft = { note:'', image:null }; fillTasks(); const n = $('#sNote'); if (n) n.focus(); return; }
   if (b.id === 'sCancel') { S.openTask = null; return fillTasks(); }
@@ -1095,6 +1491,12 @@ document.addEventListener('click', async e => {
   if (d.zoom) { const x = S.subs.find(s => s.id === d.zoom); const v = x && proofOf(x); if (v) zoom(v); return; }
   if (d.approve) return decide(d.approve, true);
   if (d.reject) return decide(d.reject, false);
+  if (b.id === 'selAllSubs') { const P = scopedPendSubs(); S.selSubs = S.selSubs.size === P.length ? new Set() : new Set(P.map(x => x.id)); return fillSupTasks(); }
+  if (b.id === 'approveSel') return decideMany([...S.selSubs]);
+  if (d.kok) return decideKudos(d.kok, true);
+  if (d.kno) return decideKudos(d.kno, false);
+  if (b.id === 'kBonusSave') { const v = parseInt($('#kBonusDef').value, 10); if (!(v > 0)) return toast('Informe um bônus maior que zero.');
+    return guard(async () => { await cfgWrite({ kudosBonus:v }); audit('Alterou bônus de reconhecimento', `${v} moedas`); toast('Bônus padrão atualizado.'); }); }
   if (d.tmode) return setTMode(d.tmode);
   if (d.tprog) return openProgress(d.tprog);
   if (b.id === 'progClose') return closeProgress();
@@ -1113,16 +1515,16 @@ document.addEventListener('click', async e => {
     const i = S.items.find(x => x.id === d.del); return guard(async () => { await deleteDoc(doc(fdb, 'items', d.del)); audit('Excluiu prêmio', i ? i.name : ''); toast('Prêmio excluído.'); }); }
   if (d.red) return settle(d.red, d.to);
   if (d.release) return guard(async () => { const s = [...S.cfg.supervisors]; const i = s.findIndex(x => !x); if (i < 0) return toast('Os ' + NSUP + ' acessos estão ocupados. Remova alguém antes de liberar.');
-    s[i] = d.release; await cfgWrite({ supervisors:s }); await updateDoc(doc(fdb, 'players', d.release), { supRequest:false }); audit('Liberou acesso de supervisão', nm(d.release)); toast(`${nm(d.release)} liberado no acesso ${i + 1}.`); });
+    s[i] = d.release; await cfgWrite({ supervisors:s, supScope:{ ...S.cfg.supScope, [d.release]:secOf(d.release) || 'all' } }); await updateDoc(doc(fdb, 'players', d.release), { supRequest:false }); audit('Liberou acesso de supervisão', nm(d.release)); toast(`${nm(d.release)} liberado no acesso ${i + 1}, cuidando do time ${tName(secOf(d.release))}.`); });
   if (d.deny) return guard(async () => { await updateDoc(doc(fdb, 'players', d.deny), { supRequest:false }); audit('Recusou pedido de supervisão', nm(d.deny)); toast('Pedido recusado.'); });
   if (d.slot !== undefined && d.pid) return guard(async () => { const s = S.cfg.supervisors.map(x => x === d.pid ? null : x); s[+d.slot] = d.pid;
-    await cfgWrite({ supervisors:s }); if (S.players[d.pid] && S.players[d.pid].supRequest) await updateDoc(doc(fdb, 'players', d.pid), { supRequest:false }); audit('Definiu acesso de supervisão', `${nm(d.pid)} no acesso ${+d.slot + 1}`); toast(`${nm(d.pid)} agora é o acesso ${+d.slot + 1}.`); });
-  if (d.unslot !== undefined) return guard(async () => { const s = [...S.cfg.supervisors]; const who = s[+d.unslot]; s[+d.unslot] = null; await cfgWrite({ supervisors:s }); audit('Removeu acesso de supervisão', nm(who)); toast('Acesso liberado.'); });
+    await cfgWrite({ supervisors:s, supScope:{ ...S.cfg.supScope, [d.pid]:(S.cfg.supScope || {})[d.pid] || secOf(d.pid) || 'all' } }); if (S.players[d.pid] && S.players[d.pid].supRequest) await updateDoc(doc(fdb, 'players', d.pid), { supRequest:false }); audit('Definiu acesso de supervisão', `${nm(d.pid)} no acesso ${+d.slot + 1}`); toast(`${nm(d.pid)} agora é o acesso ${+d.slot + 1}.`); });
+  if (d.unslot !== undefined) return guard(async () => { const s = [...S.cfg.supervisors]; const who = s[+d.unslot]; s[+d.unslot] = null; const sc = { ...S.cfg.supScope }; delete sc[who]; await cfgWrite({ supervisors:s, supScope:sc }); audit('Removeu acesso de supervisão', nm(who)); toast('Acesso liberado.'); });
   if (d.reset && S.owner) {
-    const label = { fin:'do Financeiro', chat:'do Chat', mat:'da Matrícula', ra:'do Reclame Aqui' }[d.reset];
+    const label = 'do time ' + tName(d.reset);
     if (!d.confirm) { b.dataset.confirm = '1'; const old = b.textContent; b.textContent = 'Confirmar: zerar ' + label; setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = old; } }, 5000); return; }
     return guard(async () => { const ids = activePlayers().filter(p => p.sector === d.reset).map(p => p.id);
-      const n = await resetPlayers(ids); if (n) audit('Zerou moedas do setor', SECT[d.reset].name + ` (${n} pessoas)`); toast(n ? `Moedas e ranking zerados ${label} (${n} ${n === 1 ? 'pessoa' : 'pessoas'}).` : 'Já estava tudo zerado.'); });
+      const n = await resetPlayers(ids); if (n) audit('Zerou moedas do time', tName(d.reset) + ` (${n} pessoas)`); toast(n ? `Moedas e ranking zerados ${label} (${n} ${n === 1 ? 'pessoa' : 'pessoas'}).` : 'Já estava tudo zerado.'); });
   }
   if (b.id === 'endSeason' && S.owner) {
     if (!d.confirm) { b.dataset.confirm = '1'; b.textContent = 'Confirmar: encerrar ' + seasonLabel(); setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = 'Encerrar temporada'; } }, 6000); return; }
@@ -1132,10 +1534,25 @@ document.addEventListener('click', async e => {
     S.confirmRp = null; return guard(async () => { const n = await resetPlayers([d.rp]); if (n) audit('Zerou moedas', nm(d.rp)); toast(n ? `${nm(d.rp)} foi zerado e saiu do ranking.` : `${nm(d.rp)} já estava zerado.`); }); }
   if (b.id === 'kpiRefresh') return loadKpis();
   if (d.export) return exportData(d.export);
+  if (b.id === 'bkDownload') return backupDownload();
+  if (b.id === 'bkCancel') { S.restore = null; $('#bkFile').value = ''; return fillAudit(); }
+  if (b.id === 'bkConfirm') return backupRestore();
   if (b.id === 'muralSave' || b.id === 'muralClear') return guard(async () => {
     const text = b.id === 'muralClear' ? '' : ($('#muralText').value || '').trim().slice(0, 500);
     await setDoc(doc(fdb, 'config', 'notice'), { text, by:S.me, at:now() }); S.muralDraft = null; if (b.id === 'muralClear') $('#muralText').value = '';
     audit(text ? 'Publicou recado no mural' : 'Removeu recado do mural', text); toast(text ? 'Recado publicado.' : 'Recado removido.'); });
+  if (d.ncolor !== undefined) { S.newTeamColor = +d.ncolor; document.querySelectorAll('[data-ncolor]').forEach(x => x.setAttribute('aria-pressed', x.dataset.ncolor === d.ncolor)); return; }
+  if (d.tcolor) { S.teamDraft[d.tcolor] = { ...(S.teamDraft[d.tcolor] || {}), color:+d.c }; return fillTeams(); }
+  if (d.tsave && S.owner) { const k = d.tsave, dr = S.teamDraft[k] || {}, name = (($('#tn_' + k) || {}).value || '').trim().replace(/\s+/g, ' ');
+    if (name.length < 2) return toast('O nome do time precisa ter pelo menos 2 letras.');
+    if (teamKeys().some(x => x !== k && norm(tName(x)) === norm(name))) return toast('Já existe um time com esse nome.');
+    return guard(async () => { const old = tName(k); await teamsWrite({ ...S.teams, [k]:{ ...S.teams[k], name, color:dr.color ?? S.teams[k].color } }); delete S.teamDraft[k]; audit('Editou time', old === name ? name : `${old} → ${name}`); toast('Time atualizado.'); }); }
+  if (d.tactive && S.owner) { const k = d.tactive, t = S.teams[k], turnOff = t.active !== false;
+    if (turnOff && activeTeams().length <= 1) return toast('É preciso ter pelo menos um time ativo.');
+    return guard(async () => { await teamsWrite({ ...S.teams, [k]:{ ...t, active:!turnOff } }); audit(turnOff ? 'Desativou time' : 'Reativou time', t.name); toast(turnOff ? `Time ${t.name} desativado.` : `Time ${t.name} reativado.`); }); }
+  if (b.id === 'invTemplate') return downloadCSV('modelo-autorizados', ['Nome', 'E-mail', 'Time'], [['Maria Silva', 'maria.silva@empresa.com.br', tName(activeTeams()[0])]]);
+  if (d.invdel && S.owner) { if (!d.confirm) return twoStep('confirmInv', d.invdel, fillInvites);
+    S.confirmInv = null; return guard(async () => { await deleteDoc(doc(fdb, 'invites', d.invdel)); audit('Removeu da lista de autorizados', d.invdel); toast('E-mail removido da lista.'); }); }
   if (d.rename && S.owner) { const v = ($('#cn_' + d.rename).value || '').trim().replace(/\s+/g, ' ');
     if (v.length < 3) return toast('O nome precisa ter pelo menos 3 letras.');
     const old = nm(d.rename); return guard(async () => { await updateDoc(doc(fdb, 'players', d.rename), { name:v }); delete S.names[d.rename]; audit('Renomeou colaborador', `${old} → ${v}`); toast('Nome atualizado.'); }); }
@@ -1146,31 +1563,42 @@ document.addEventListener('click', async e => {
     return guard(async () => {
       const block = !p.blocked;
       await updateDoc(doc(fdb, 'players', p.id), block ? { blocked:true, supRequest:false } : { blocked:false });
-      if (block && supIds().includes(p.id)) await cfgWrite({ supervisors:S.cfg.supervisors.map(x => x === p.id ? null : x) });
+      if (block && supIds().includes(p.id)) { const sc = { ...S.cfg.supScope }; delete sc[p.id]; await cfgWrite({ supervisors:S.cfg.supervisors.map(x => x === p.id ? null : x), supScope:sc }); }
       audit(block ? 'Removeu acesso do colaborador' : 'Reativou colaborador', nm(p.id)); toast(block ? `${nm(p.id)} não acessa mais o Unicoins.` : `${nm(p.id)} foi reativado.`); }); }
 });
 
 document.addEventListener('change', e => {
   const t = e.target, d = t.dataset || {};
   if (d.tsel) { if (t.checked) S.tSel.add(d.tsel); else S.tSel.delete(d.tsel); return selCount(); }
+  if (d.psub) { if (t.checked) S.selSubs.add(d.psub); else S.selSubs.delete(d.psub); return fillSupTasks(); }
+  if (t.id === 'tRecur') return syncRecur();
+  if (t.id === 'kTo') { S.kudoDraft.to = t.value; return; }
   if (t.id === 'sImg' && t.files[0]) { const f = t.files[0]; if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
     readImage(f, 180000).then(u => { S.draft.image = u; fillTasks(); }).catch(() => toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
   if (t.id === 'fImg' && t.files[0]) { const f = t.files[0]; if (!/^image\//.test(f.type)) return toast('Escolha um arquivo de imagem.');
     readImage(f).then(u => { S.formImg = u; setThumb(); }).catch(() => toast('Não foi possível ler essa imagem. Tente outro arquivo.')); return; }
-  if (d.move) { const p = S.players[d.move]; guard(async () => { await updateDoc(doc(fdb, 'players', d.move), { sector:t.value }); audit('Mudou colaborador de time', `${nm(d.move)}: ${secName(p && p.sector)} → ${secName(t.value)}`); toast('Time atualizado.'); }); }
+  if (t.id === 'invFile' && t.files[0]) { importInvites(t.files[0]); t.value = ''; return; }
+  if (t.id === 'bkFile' && t.files[0]) { backupRead(t.files[0]); return; }
+  if (t.id === 'inviteOnly' && S.owner) { const v = t.checked; guard(async () => { await cfgWrite({ inviteOnly:v }); audit(v ? 'Ativou cadastro só para autorizados' : 'Liberou cadastro para todos', ''); toast(v ? 'Agora só quem está na lista consegue se cadastrar.' : 'Cadastro liberado para qualquer pessoa com o link.'); }); return; }
+  if (d.scope && S.owner) { const v = t.value; guard(async () => { await cfgWrite({ supScope:{ ...S.cfg.supScope, [d.scope]:v } }); audit('Alterou times do supervisor', `${nm(d.scope)}: ${v === 'all' ? 'todos os times' : tName(v)}`); toast(`${nm(d.scope)} agora cuida de ${v === 'all' ? 'todos os times' : 'o time ' + tName(v)}.`); }); return; }
+  if (d.move) { const p = S.players[d.move]; guard(async () => { await updateDoc(doc(fdb, 'players', d.move), { sector:t.value }); audit('Mudou colaborador de time', `${nm(d.move)}: ${tName(p && p.sector)} → ${tName(t.value)}`); toast('Time atualizado.'); }); }
 });
 document.addEventListener('input', e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === 'tFind') { S.tFind = t.value; fillPeoplePick(); }
   if (t.id === 'pFind') { S.pFind = t.value; fillColab(); }
   if (t.id === 'sNote') S.draft.note = t.value;
+  if (t.id === 'kMsg') S.kudoDraft.msg = t.value;
   if (t.id === 'muralText') S.muralDraft = t.value;
   if (d.reason) S.reasons[d.reason] = t.value;
   if (d.obs) S.obs[d.obs] = t.value;
+  if (d.kbonus) S.bonus[d.kbonus] = t.value;
   if (d.cname) S.names[d.cname] = t.value;
+  if (d.tname) S.teamDraft[d.tname] = { ...(S.teamDraft[d.tname] || {}), name:t.value };
 });
 document.addEventListener('keydown', e => {
-  if ((e.target.id === 'sImgBtn' || e.target.id === 'fImgBtn') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); $(e.target.id === 'sImgBtn' ? '#sImg' : '#fImg').click(); }
+  const map = { sImgBtn:'#sImg', fImgBtn:'#fImg', invFileBtn:'#invFile', bkFileBtn:'#bkFile' };
+  if (map[e.target.id] && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); $(map[e.target.id]).click(); }
 });
 
 document.addEventListener('submit', e => {
@@ -1184,34 +1612,44 @@ document.addEventListener('submit', e => {
   });
   if (f.id === 'joinForm') { const n = $('#jName').value.trim().replace(/\s+/g, ' ');
     if (n.length < 3) return toast('Digite seu nome.');
-    if (!S.joinSector) return toast('Selecione seu setor.');
+    if (!S.joinSector) return toast('Selecione seu time.');
     return join(n, S.joinSector, $('#jSup').checked); }
   if (f.id === 'subForm') return guard(async () => {
     const t = S.tasks.find(x => x.id === f.dataset.task), p = me(); if (!t || !p) return;
     if (isExpired(t)) return toast('O prazo desta tarefa já terminou.');
     const note = S.draft.note.trim(), image = safeImg(S.draft.image);
     if (t.proof && !note && !image) return toast('Anexe uma imagem ou descreva a comprovação.');
-    if (S.subs.some(x => x.task === t.id && x.player === S.me && (x.status === 'pendente' || (x.status === 'aprovada' && !t.repeat)))) return toast('Você já enviou esta tarefa.');
-    const sid = t.repeat ? doc(collection(fdb, 'submissions')).id : t.id + '_' + S.me;
+    if (mySubsFor(t).some(x => x.status === 'pendente' || (x.status === 'aprovada' && !t.repeat))) return toast('Você já enviou esta tarefa.');
+    const per = curPeriod(t);
+    const sid = isRecurring(t) ? `${t.id}_${S.me}_${per}` : t.repeat ? doc(collection(fdb, 'submissions')).id : t.id + '_' + S.me;
     if (image) await setDoc(doc(fdb, 'proofs', sid), { image, player:S.me, at:now() });
-    await setDoc(doc(fdb, 'submissions', sid), { task:t.id, taskTitle:t.title, reward:t.reward, player:S.me, sector:p.sector, note, hasImage:!!image, status:'pendente', at:now() });
+    await setDoc(doc(fdb, 'submissions', sid), { task:t.id, taskTitle:t.title, reward:t.reward, player:S.me, sector:p.sector, note, hasImage:!!image, status:'pendente', period:per, at:now() });
     S.openTask = null; S.draft = { note:'', image:null }; fillTasks(); toast('Enviado! A supervisão vai conferir.');
   });
+  if (f.id === 'kudoForm') return guard(async () => {
+    const to = $('#kTo').value, msg = ($('#kMsg').value || '').trim().replace(/\s+/g, ' ');
+    if (!to) return toast('Escolha o colega que você quer reconhecer.');
+    if (msg.length < 10) return toast('Conte em pelo menos 10 letras o que o colega fez.');
+    if (kudosThisWeek() >= 3) return toast('Você já enviou 3 reconhecimentos esta semana.');
+    await addDoc(collection(fdb, 'kudos'), { from:S.me, to, sector:me().sector, message:msg.slice(0, 200), status:'pendente', at:now() });
+    S.kudoDraft = { to:'', msg:'' }; $('#kMsg').value = ''; $('#kTo').value = ''; fillMine(); toast('Reconhecimento enviado! A supervisão vai analisar.');
+  });
   if (f.id === 'taskForm') return guard(async () => {
-    const title = $('#tTitle').value.trim(), reward = parseInt($('#tReward').value, 10), dl = $('#tDeadline').value;
+    const title = $('#tTitle').value.trim(), reward = parseInt($('#tReward').value, 10), dl = $('#tDeadline').value, recur = $('#tRecur').value;
     if (!title || !(reward > 0)) return toast('Informe a tarefa e uma recompensa maior que zero.');
     let deadlineAt = null;
     if (dl) { const [y, m, dd] = dl.split('-').map(Number); deadlineAt = new Date(y, m - 1, dd, 23, 59, 59).getTime(); if (!S.editingTask && deadlineAt < now()) return toast('O prazo precisa ser hoje ou uma data futura.'); }
     let sector, audience;
     if (S.tMode === 'pessoas') {
-      const ids = [...S.tSel].filter(id => S.players[id] && !S.players[id].blocked);
+      const ids = [...S.tSel].filter(id => S.players[id] && !S.players[id].blocked && inScope(S.players[id].sector));
       if (!ids.length) return toast('Marque pelo menos um colaborador.');
       const secs = [...new Set(ids.map(id => S.players[id].sector))];
       sector = secs.length === 1 ? secs[0] : 'ambos'; audience = ids.map(id => 'uid:' + id);
-    } else { sector = $('#tSector').value; audience = sector === 'ambos' ? SECS.map(k => 'sec:' + k) : ['sec:' + sector]; }
-    const data = { title, desc:$('#tDesc').value.trim(), reward, sector, audience, deadlineAt, proof:$('#tProof').checked, repeat:$('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
+    } else { sector = $('#tSector').value; audience = sector === 'ambos' ? ['sec:all'] : ['sec:' + sector]; }
+    if (!canEdit(sector)) return toast('Você só pode criar tarefas para o time ' + tName(myScope()) + '.');
+    const data = { title, desc:$('#tDesc').value.trim(), reward, sector, audience, deadlineAt, recur:recur || '', proof:$('#tProof').checked, repeat:!recur && $('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
     if (S.editingTask) { await updateDoc(doc(fdb, 'tasks', S.editingTask), data); audit('Editou tarefa', title); toast('Tarefa atualizada.'); }
-    else { await addDoc(collection(fdb, 'tasks'), { ...data, createdAt:now() }); audit('Criou tarefa', `${title} · +${reward} · para ${S.tMode === 'pessoas' ? audience.length + ' pessoa(s)' : secName(sector)}`); toast('Tarefa publicada.'); }
+    else { await addDoc(collection(fdb, 'tasks'), { ...data, createdAt:now() }); audit('Criou tarefa', `${title} · +${reward} · para ${S.tMode === 'pessoas' ? audience.length + ' pessoa(s)' : tName(sector)}${recur ? ' · ' + RECUR_LAB[recur].toLowerCase() : ''}`); toast('Tarefa publicada.'); }
     resetTaskForm();
   });
   if (f.id === 'itemForm') return guard(async () => {
@@ -1219,8 +1657,9 @@ document.addEventListener('submit', e => {
     if (!name || !(cost > 0)) return toast('Informe o nome e um custo maior que zero.');
     const data = { name, desc:$('#fDesc').value.trim(), emoji:$('#fEmoji').value.trim() || '🎁', cost, stock:st === '' ? null : Math.max(0, parseInt(st, 10) || 0),
       sector:$('#fSector').value, active:$('#fActive').checked, image:safeImg(S.formImg), updatedAt:now(), updatedBy:S.me };
+    if (!canEdit(data.sector)) return toast('Você só pode cadastrar prêmios para o time ' + tName(myScope()) + '.');
     if (S.editing) { await updateDoc(doc(fdb, 'items', S.editing), data); audit('Editou prêmio', `${name} · ${cost} moedas`); toast('Prêmio atualizado na loja.'); }
-    else { await addDoc(collection(fdb, 'items'), { ...data, createdAt:now() }); audit('Criou prêmio', `${name} · ${cost} moedas · ${secName(data.sector)}`); toast('Prêmio adicionado à loja.'); }
+    else { await addDoc(collection(fdb, 'items'), { ...data, createdAt:now() }); audit('Criou prêmio', `${name} · ${cost} moedas · ${tName(data.sector)}`); toast('Prêmio adicionado à loja.'); }
     resetForm();
   });
   if (f.id === 'coinForm') return guard(async () => {
@@ -1234,11 +1673,26 @@ document.addEventListener('submit', e => {
   if (f.id === 'bulkForm') return guard(async () => {
     const sec = $('#bSector').value, amt = parseInt($('#bAmt').value, 10), why = $('#bWhy').value.trim();
     if (!(amt > 0) || !why) return toast('Informe a quantidade e o motivo.');
-    const ps = activePlayers().filter(p => p.sector === sec && !supIds().includes(p.id));
-    if (!ps.length) return toast('Ninguém deste setor entrou na loja ainda.');
-    await bulkCredit(ps.map(p => p.id), amt, why);
-    audit('Creditou setor inteiro', `${SECT[sec].name} · +${amt} para ${ps.length} pessoas · ${why}`);
-    toast(`${fmt(amt)} Unicoins creditados para ${ps.length} pessoas do ${SECT[sec].name}.`); f.reset();
+    const ps = activePlayers().filter(p => p.sector === sec && !supIds().includes(p.id) && !ADMIN_UIDS.includes(p.id));
+    if (!ps.length) return toast('Ninguém deste time entrou na loja ainda.');
+    await bulkCredit(ps.map(p => p.id), amt, why, sec);
+    audit('Creditou time inteiro', `${tName(sec)} · +${amt} para ${ps.length} pessoas · ${why}`);
+    toast(`${fmt(amt)} Unicoins creditados para ${ps.length} pessoas do time ${tName(sec)}.`); f.reset();
+  });
+  if (f.id === 'teamForm' && S.owner) return guard(async () => {
+    const name = $('#nTeamName').value.trim().replace(/\s+/g, ' ');
+    if (name.length < 2) return toast('O nome do time precisa ter pelo menos 2 letras.');
+    if (teamKeys().some(k => norm(tName(k)) === norm(name))) return toast('Já existe um time com esse nome.');
+    const key = 't' + now().toString(36), order = Math.max(-1, ...teamKeys().map(k => S.teams[k].order || 0)) + 1;
+    await teamsWrite({ ...S.teams, [key]:{ name, color:S.newTeamColor, order, active:true } });
+    audit('Criou time', name); toast(`Time ${name} criado.`); f.reset(); S.newTeamColor = (S.newTeamColor + 1) % PALETTE;
+  });
+  if (f.id === 'invForm' && S.owner) return guard(async () => {
+    const name = $('#iName').value.trim().replace(/\s+/g, ' '), em = lowerEmail($('#iEmail').value), sec = $('#iSector').value;
+    if (name.length < 3) return toast('Digite o nome completo.');
+    if (!validEmail(em)) return toast('Digite um e-mail válido.');
+    await setDoc(doc(fdb, 'invites', em), { name, email:em, sector:sec, by:S.me, at:now() });
+    audit('Adicionou à lista de autorizados', `${name} (${em}) · ${tName(sec)}`); toast(`${name} adicionado à lista.`); f.reset();
   });
 });
 </script>
