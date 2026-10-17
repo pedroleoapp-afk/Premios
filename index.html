@@ -12,7 +12,7 @@
 :root{
   --bg:#EAF0F7; --surface:#FFFFFF; --surface2:#F3F6FB; --ink:#10233A; --muted:#5B6B80; --line:#D3DCE8;
   --blue:#1B5FD1; --blue-ink:#FFFFFF; --gold:#E8B21E; --gold-deep:#9A6C00;
-  --fin:#0F7F73; --fin-soft:#DDF2EF; --chat:#5B3FC4; --chat-soft:#E9E4FB; --mat:#B4530A; --mat-soft:#FCE9D9;
+  --fin:#0F7F73; --fin-soft:#DDF2EF; --chat:#5B3FC4; --chat-soft:#E9E4FB; --mat:#B4530A; --mat-soft:#FCE9D9; --ra:#B42346; --ra-soft:#FBE3E9;
   --ok:#1E8A4C; --bad:#C2372F; --shadow:0 1px 0 rgba(16,35,58,.06),0 6px 18px -10px rgba(16,35,58,.25);
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   color-scheme:light;
@@ -20,13 +20,13 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#0B1524; --surface:#132238; --surface2:#182A44; --ink:#E7EEF7; --muted:#9AAAC0; --line:#24395A;
-    --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550; --mat:#F0A35E; --mat-soft:#3A2614;
+    --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550; --mat:#F0A35E; --mat-soft:#3A2614; --ra:#F2839E; --ra-soft:#3D1622;
     --ok:#4CC27F; --bad:#F07067; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.7); color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0B1524; --surface:#132238; --surface2:#182A44; --ink:#E7EEF7; --muted:#9AAAC0; --line:#24395A;
-  --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550; --mat:#F0A35E; --mat-soft:#3A2614;
+  --blue:#5B93F0; --blue-ink:#071224; --fin:#3BC2B0; --fin-soft:#12343A; --chat:#A18CF2; --chat-soft:#272550; --mat:#F0A35E; --mat-soft:#3A2614; --ra:#F2839E; --ra-soft:#3D1622;
   --ok:#4CC27F; --bad:#F07067; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.7); color-scheme:dark;
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -66,6 +66,7 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .sector-tag.fin{background:var(--fin-soft);color:var(--fin)}
 .sector-tag.chat{background:var(--chat-soft);color:var(--chat)}
 .sector-tag.mat{background:var(--mat-soft);color:var(--mat)}
+.sector-tag.ra{background:var(--ra-soft);color:var(--ra)}
 .sector-tag.ambos{background:var(--surface2);color:var(--muted)}
 @media (max-width:560px){.hero{grid-template-columns:1fr;text-align:left}.coin.big{width:84px;height:84px;font-size:44px}}
 
@@ -136,15 +137,17 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .slot{display:flex;align-items:center;gap:12px;padding:12px;border:1px dashed var(--line);border-radius:12px;margin-bottom:10px}
 .slot b{font-family:"Bricolage Grotesque",sans-serif}
 .notice{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px;text-align:center;max-width:560px;margin:40px auto}
-.choose{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
 .choose button{border:2px solid var(--line);background:var(--surface2);border-radius:14px;padding:22px 12px;cursor:pointer;font:700 18px "Bricolage Grotesque",sans-serif}
 .choose button.fin:hover,.choose button.fin:focus-visible{border-color:var(--fin)}
 .choose button.mat:hover,.choose button.mat:focus-visible{border-color:var(--mat)}
+.choose button.ra:hover,.choose button.ra:focus-visible{border-color:var(--ra)}
 .choose button.chat:hover,.choose button.chat:focus-visible{border-color:var(--chat)}
-@media (max-width:620px){.choose{grid-template-columns:1fr}}
+@media (max-width:480px){.choose{grid-template-columns:1fr}}
 .joinform{text-align:left;margin-top:18px}
 .choose button[aria-pressed="true"].fin{border-color:var(--fin);background:var(--fin-soft);color:var(--fin)}
 .choose button[aria-pressed="true"].mat{border-color:var(--mat);background:var(--mat-soft);color:var(--mat)}
+.choose button[aria-pressed="true"].ra{border-color:var(--ra);background:var(--ra-soft);color:var(--ra)}
 .choose button[aria-pressed="true"].chat{border-color:var(--chat);background:var(--chat-soft);color:var(--chat)}
 .ticket .pic{aspect-ratio:16/10;background:var(--surface2);overflow:hidden}
 .ticket .pic img{width:100%;height:100%;object-fit:cover;display:block}
@@ -222,9 +225,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, query, where, orderBy, limit, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, runTransaction, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const SECT = { fin:{ name:'Financeiro' }, chat:{ name:'Chat Uniasselvi' }, mat:{ name:'Matrícula' }, ambos:{ name:'Todos os setores' } };
-const SECS = ['fin', 'chat', 'mat'];
-const NSUP = 4;
+const SECT = { fin:{ name:'Financeiro' }, chat:{ name:'Chat Uniasselvi' }, mat:{ name:'Matrícula' }, ra:{ name:'Reclame Aqui' }, ambos:{ name:'Todos os setores' } };
+const SECS = ['fin', 'chat', 'mat', 'ra'];
+const NSUP = 5;
 const secOptions = () => SECS.map(k => `<option value="${k}">${SECT[k].name}</option>`).join('');
 const RED_LAB = { pendente:'Aguardando', separacao:'Em separação', entregue:'Entregue', recusada:'Recusada · estornado' };
 const SUB_LAB = { pendente:'Em análise', aprovada:'Aprovada', recusada:'Recusada' };
@@ -694,7 +697,7 @@ function buildSup(){
       <label class="f" for="nextSeason">Nome da próxima temporada</label><input class="in" id="nextSeason" maxlength="40" placeholder="Ex.: Temporada Novembro">
       <button class="btn bad" id="endSeason" style="margin-top:12px">Encerrar temporada</button>
       <h3 style="margin-top:22px">Zerar só um setor</h3>
-      <div class="row">${SECS.map(k => `<button class="btn bad" data-reset="${k}">Zerar ${SECT[k].name.split(' ')[0]}</button>`).join('')}</div></section>` : ''}</div>
+      <div class="row">${SECS.map(k => `<button class="btn bad" data-reset="${k}">Zerar ${k === 'chat' ? 'Chat' : SECT[k].name}</button>`).join('')}</div></section>` : ''}</div>
     <section class="panel"><h3>Colaboradores</h3><ul class="list" id="playerList"></ul><h3 style="margin-top:22px">Movimentações recentes</h3><ul class="list" id="ledgerList"></ul></section></div>`;
   if (S.sub === 'pedidos') h += `<div class="cols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><section class="panel"><h3>Pedidos em aberto</h3><div id="pendList"></div></section>
     <section class="panel"><h3>Histórico</h3><ul class="list" id="doneList"></ul></section></div>`;
@@ -710,7 +713,7 @@ function buildSup(){
   if (S.sub === 'colab') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Colaboradores cadastrados</h3><input class="in" id="pFind" placeholder="Buscar por nome ou e-mail" value="${esc(S.pFind)}" style="max-width:280px"></div>
     <ul class="list" id="colabList"></ul>
     <p class="hint" style="font-size:13px;margin-top:14px">Por segurança, o Firebase não permite ver ou definir a senha de outra pessoa pela página. "Redefinir senha" envia ao colaborador um e-mail para ele criar uma nova. Para apagar o login de vez, use o console do Firebase: Authentication › Usuários › menu ⋮ › Excluir conta.</p></section>`;
-  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os 4 acessos de supervisão</h3>
+  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os ${NSUP} acessos de supervisão</h3>
       <p class="hint" style="margin-top:-4px">Todos têm as mesmas permissões que o administrador na Supervisão, menos Colaboradores e Acessos. Os demais colaboradores só fazem tarefas e trocam prêmios.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
     ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
       <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
@@ -846,7 +849,7 @@ async function loadKpis(){
     const ok = subs.filter(x => x.status === 'aprovada'), no = subs.filter(x => x.status === 'recusada');
     const top = (arr, key) => { const m = {}; arr.forEach(x => m[x[key]] = (m[x[key]] || 0) + 1); return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 5); };
     S.kpi = {
-      people:ps.length, bySec:SECS.map(k => ps.filter(p => p.sector === k).length + ' ' + SECT[k].name.split(' ')[0]).join(' · '),
+      people:ps.length, bySec:SECS.map(k => ps.filter(p => p.sector === k).length + ' ' + (k === 'chat' ? 'Chat' : SECT[k].name)).join(' · '),
       circ:ps.reduce((s, p) => s + bal(p.id), 0), dist:ps.reduce((s, p) => s + earned(p.id), 0),
       ok:ok.length, no:no.length, pend:subs.filter(x => x.status === 'pendente').length,
       rate:ok.length + no.length ? Math.round(100 * ok.length / (ok.length + no.length)) : null,
@@ -889,7 +892,7 @@ function fillColab(){
 
 /* Acessos */
 function fillAccess(){
-  $('#slots').innerHTML = [0, 1, 2, 3].map(i => { const id = S.cfg.supervisors[i];
+  $('#slots').innerHTML = [...Array(NSUP).keys()].map(i => { const id = S.cfg.supervisors[i];
     return `<div class="slot"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow">${id ? `<b>${esc(nm(id))}</b>` : '<span class="hint">Acesso livre</span>'}</div>
     ${id && S.owner ? `<button class="btn bad sm" data-unslot="${i}">Remover</button>` : ''}</div>`; }).join('');
   if (!S.owner) return;
@@ -898,7 +901,7 @@ function fillAccess(){
   $('#reqList').innerHTML = reqs.length ? reqs.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name} · pediu acesso de supervisão</div></div>
     <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
   const others = all.filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id));
-  $('#peopleList').innerHTML = others.length ? others.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[0, 1, 2, 3].map(i => `<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
+  $('#peopleList').innerHTML = others.length ? others.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${SECT[p.sector].name}</div></div>${[...Array(NSUP).keys()].map(i => `<button class="btn ghost sm" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</li>`).join('') : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
 }
 
 /* ---------- Ações ---------- */
@@ -1109,14 +1112,14 @@ document.addEventListener('click', async e => {
     S.confirmDel = null; if (S.editing === d.del) resetForm();
     const i = S.items.find(x => x.id === d.del); return guard(async () => { await deleteDoc(doc(fdb, 'items', d.del)); audit('Excluiu prêmio', i ? i.name : ''); toast('Prêmio excluído.'); }); }
   if (d.red) return settle(d.red, d.to);
-  if (d.release) return guard(async () => { const s = [...S.cfg.supervisors]; const i = s.findIndex(x => !x); if (i < 0) return toast('Os 4 acessos estão ocupados. Remova alguém antes de liberar.');
+  if (d.release) return guard(async () => { const s = [...S.cfg.supervisors]; const i = s.findIndex(x => !x); if (i < 0) return toast('Os ' + NSUP + ' acessos estão ocupados. Remova alguém antes de liberar.');
     s[i] = d.release; await cfgWrite({ supervisors:s }); await updateDoc(doc(fdb, 'players', d.release), { supRequest:false }); audit('Liberou acesso de supervisão', nm(d.release)); toast(`${nm(d.release)} liberado no acesso ${i + 1}.`); });
   if (d.deny) return guard(async () => { await updateDoc(doc(fdb, 'players', d.deny), { supRequest:false }); audit('Recusou pedido de supervisão', nm(d.deny)); toast('Pedido recusado.'); });
   if (d.slot !== undefined && d.pid) return guard(async () => { const s = S.cfg.supervisors.map(x => x === d.pid ? null : x); s[+d.slot] = d.pid;
     await cfgWrite({ supervisors:s }); if (S.players[d.pid] && S.players[d.pid].supRequest) await updateDoc(doc(fdb, 'players', d.pid), { supRequest:false }); audit('Definiu acesso de supervisão', `${nm(d.pid)} no acesso ${+d.slot + 1}`); toast(`${nm(d.pid)} agora é o acesso ${+d.slot + 1}.`); });
   if (d.unslot !== undefined) return guard(async () => { const s = [...S.cfg.supervisors]; const who = s[+d.unslot]; s[+d.unslot] = null; await cfgWrite({ supervisors:s }); audit('Removeu acesso de supervisão', nm(who)); toast('Acesso liberado.'); });
   if (d.reset && S.owner) {
-    const label = { fin:'do Financeiro', chat:'do Chat', mat:'da Matrícula' }[d.reset];
+    const label = { fin:'do Financeiro', chat:'do Chat', mat:'da Matrícula', ra:'do Reclame Aqui' }[d.reset];
     if (!d.confirm) { b.dataset.confirm = '1'; const old = b.textContent; b.textContent = 'Confirmar: zerar ' + label; setTimeout(() => { if (b.isConnected) { delete b.dataset.confirm; b.textContent = old; } }, 5000); return; }
     return guard(async () => { const ids = activePlayers().filter(p => p.sector === d.reset).map(p => p.id);
       const n = await resetPlayers(ids); if (n) audit('Zerou moedas do setor', SECT[d.reset].name + ` (${n} pessoas)`); toast(n ? `Moedas e ranking zerados ${label} (${n} ${n === 1 ? 'pessoa' : 'pessoas'}).` : 'Já estava tudo zerado.'); });
