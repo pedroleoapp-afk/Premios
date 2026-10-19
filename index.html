@@ -311,14 +311,18 @@ function applyTeamStyles(){
 applyTeamStyles();
 
 /* ---------- Escopo da supervisão ---------- */
-const myScope = () => S.owner ? 'all' : ((S.cfg.supScope || {})[S.me] || 'all');
-const inScope = sec => myScope() === 'all' || sec === myScope();
-const canEdit = sec => myScope() === 'all' || (sec !== 'ambos' && sec === myScope());
-const scopeTeams = () => myScope() === 'all' ? activeTeams() : [myScope()];
+/* Valor salvo por supervisor: 'all' (todos os times) ou uma lista de times. Um texto com um time só (versão anterior) também vale. */
+const scopeOf = uid => { const v = (S.cfg.supScope || {})[uid]; if (!v || v === 'all') return 'all'; const l = (Array.isArray(v) ? v : [v]).filter(Boolean); return l.length ? l : 'all'; };
+const myScope = () => S.owner ? 'all' : scopeOf(S.me);
+const allScope = () => myScope() === 'all';
+const inScope = sec => allScope() || myScope().includes(sec);
+const canEdit = sec => allScope() || (sec !== 'ambos' && myScope().includes(sec));
+const scopeTeams = () => allScope() ? activeTeams() : teamKeys().filter(k => myScope().includes(k));
+const scopeLabel = v => v === 'all' ? 'todos os times' : v.map(tName).join(', ');
 
 function viewSector(){
   if (S.viewAs) return S.viewAs;
-  if (isSup()) return S.preview || (myScope() !== 'all' ? myScope() : (me() && me().sector)) || activeTeams()[0] || 'fin';
+  if (isSup()) return S.preview || (!allScope() ? scopeTeams()[0] : (me() && me().sector)) || activeTeams()[0] || 'fin';
   return me() ? me().sector : activeTeams()[0];
 }
 const seasonLabel = () => S.cfg.seasonName || 'Temporada atual';
@@ -598,7 +602,7 @@ function markSeen(kind){
 
 function renderHeader(){
   const sup = isSup(), p = me();
-  const scope = sup && !S.owner && myScope() !== 'all' ? ' · ' + tName(myScope()) : '';
+  const scope = sup && !S.owner && !allScope() ? ' · ' + scopeLabel(myScope()) : '';
   $('#role').textContent = S.viewAs ? 'Prévia · ' + tName(S.viewAs) : S.owner ? 'Administrador' : sup ? 'Supervisão' + scope : p ? (p.name || 'Colaborador') + ' · ' + tName(p.sector) + (p.supRequest ? ' · supervisão aguardando liberação' : '') : 'Novo por aqui';
   $('#viewBtn').hidden = !sup || !!S.viewAs;
   $('#installBtn').hidden = !installEvt;
@@ -845,8 +849,8 @@ function subsFor(){
   s.push(['acessos', 'Acessos']);
   return s;
 }
-const sectorSelect = (id, withAll) => `<select class="in" id="${id}" aria-label="Time">${withAll && myScope() === 'all' ? '<option value="ambos">Todos os times</option>' : ''}${teamOptions(scopeTeams())}</select>`;
-const scopeNote = () => myScope() !== 'all' ? `<p class="setup" style="margin:0 0 16px">Você gerencia o time <b>${esc(tName(myScope()))}</b>. Itens de outros times ou de todos os times aparecem só para consulta.</p>` : '';
+const sectorSelect = (id, withAll) => `<select class="in" id="${id}" aria-label="Time">${withAll && allScope() ? '<option value="ambos">Todos os times</option>' : ''}${teamOptions(scopeTeams())}</select>`;
+const scopeNote = () => !allScope() ? `<p class="setup" style="margin:0 0 16px">Você gerencia ${myScope().length > 1 ? 'os times' : 'o time'} <b>${esc(scopeLabel(myScope()))}</b>. Itens de outros times ou de todos os times aparecem só para consulta.</p>` : '';
 
 function buildSup(){
   const subs = subsFor();
@@ -953,7 +957,7 @@ function buildSup(){
     <ul class="list" id="colabList"></ul>
     <p class="hint" style="font-size:13px;margin-top:14px">Por segurança, o Firebase não permite ver ou definir a senha de outra pessoa pela página. "Redefinir senha" envia ao colaborador um e-mail para ele criar uma nova. Para apagar o login de vez, use o console do Firebase: Authentication › Usuários › menu ⋮ › Excluir conta.</p></section>`;
   if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os ${NSUP} acessos de supervisão</h3>
-      <p class="hint" style="margin-top:-4px">Cada supervisor pode cuidar de todos os times ou de um só. Quem cuida de um time só cria e aprova coisas daquele time. Só o administrador acessa Times, Colaboradores e Acessos.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
+      <p class="hint" style="margin-top:-4px">Cada supervisor pode cuidar de todos os times ou só dos times marcados. Ele só cria, credita e aprova coisas dos times dele. Só o administrador acessa Times, Colaboradores e Acessos.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
     ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
       <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
   $('#main').innerHTML = h;
@@ -1175,9 +1179,13 @@ function fillColab(){
 
 /* Acessos */
 function fillAccess(){
-  $('#slots').innerHTML = [...Array(NSUP).keys()].map(i => { const id = S.cfg.supervisors[i], scope = id ? ((S.cfg.supScope || {})[id] || 'all') : 'all';
-    return `<div class="slot" style="flex-wrap:wrap"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow" style="min-width:140px">${id ? `<b>${esc(nm(id))}</b>` : '<span class="hint">Acesso livre</span>'}</div>
-    ${id ? (S.owner ? `<select class="in sm" style="width:auto;flex:none" data-scope="${id}" aria-label="Times de ${esc(nm(id))}"><option value="all" ${scope === 'all' ? 'selected' : ''}>Todos os times</option>${teamOptions(teamKeys().filter(k => S.teams[k].active !== false || k === scope), scope)}</select><button class="btn bad sm" style="flex:none" data-unslot="${i}">Remover</button>` : `<span class="hint" style="font-size:13px">${scope === 'all' ? 'Todos os times' : esc(tName(scope))}</span>`) : ''}</div>`; }).join('');
+  $('#slots').innerHTML = [...Array(NSUP).keys()].map(i => { const id = S.cfg.supervisors[i], scope = id ? scopeOf(id) : 'all';
+    const keys = teamKeys().filter(k => S.teams[k].active !== false || (scope !== 'all' && scope.includes(k)));
+    const picker = id && S.owner ? `<div class="swatches" style="margin-top:8px;gap:6px 14px;width:100%">
+        <label class="check" style="margin:0"><input type="checkbox" data-scopeall="${id}" ${scope === 'all' ? 'checked' : ''}> Todos os times</label>
+        ${keys.map(k => `<label class="check" style="margin:0"><input type="checkbox" data-scopeteam="${id}" value="${esc(k)}" ${scope === 'all' || scope.includes(k) ? 'checked' : ''} ${scope === 'all' ? 'disabled' : ''}> ${esc(tName(k))}</label>`).join('')}</div>` : '';
+    return `<div class="slot" style="flex-wrap:wrap"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow" style="min-width:140px">${id ? `<b>${esc(nm(id))}</b>${S.owner ? '' : `<div class="hint" style="font-size:13px">${esc(scopeLabel(scope))}</div>`}` : '<span class="hint">Acesso livre</span>'}</div>
+    ${id && S.owner ? `<button class="btn bad sm" style="flex:none" data-unslot="${i}">Remover</button>` : ''}${picker}</div>`; }).join('');
   if (!S.owner) return;
   const sups = supIds(), all = activePlayers();
   const reqs = all.filter(p => p.supRequest && !sups.includes(p.id));
@@ -1476,7 +1484,7 @@ document.addEventListener('click', async e => {
   if (b.id === 'google') { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(err) { if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') toast(authMsg(err)); } return; }
   if (b.id === 'forgot') { const em = ($('#lEmail').value || '').trim(); if (!em) return toast('Digite seu e-mail no campo acima.');
     try { await sendPasswordResetEmail(auth, em); toast('Se existir conta, enviamos o link de nova senha para ' + em + '.'); } catch(err) { toast(authMsg(err)); } return; }
-  if (b.id === 'viewBtn') { S.viewAs = myScope() !== 'all' ? myScope() : (me() && me().sector) || activeTeams()[0]; S.tab = 'loja'; S.openTask = null; window.scrollTo(0, 0); return build(); }
+  if (b.id === 'viewBtn') { S.viewAs = !allScope() ? scopeTeams()[0] : (me() && me().sector) || activeTeams()[0]; S.tab = 'loja'; S.openTask = null; window.scrollTo(0, 0); return build(); }
   if (d.viewas) { S.viewAs = d.viewas; return build(); }
   if (b.id === 'exitView') { S.viewAs = null; S.tab = 'sup'; return build(); }
   if (d.tab) { S.tab = d.tab; S.confirmId = null; if (d.tab !== 'tarefas') S.openTask = null; return build(); }
@@ -1515,10 +1523,10 @@ document.addEventListener('click', async e => {
     const i = S.items.find(x => x.id === d.del); return guard(async () => { await deleteDoc(doc(fdb, 'items', d.del)); audit('Excluiu prêmio', i ? i.name : ''); toast('Prêmio excluído.'); }); }
   if (d.red) return settle(d.red, d.to);
   if (d.release) return guard(async () => { const s = [...S.cfg.supervisors]; const i = s.findIndex(x => !x); if (i < 0) return toast('Os ' + NSUP + ' acessos estão ocupados. Remova alguém antes de liberar.');
-    s[i] = d.release; await cfgWrite({ supervisors:s, supScope:{ ...S.cfg.supScope, [d.release]:secOf(d.release) || 'all' } }); await updateDoc(doc(fdb, 'players', d.release), { supRequest:false }); audit('Liberou acesso de supervisão', nm(d.release)); toast(`${nm(d.release)} liberado no acesso ${i + 1}, cuidando do time ${tName(secOf(d.release))}.`); });
+    s[i] = d.release; await cfgWrite({ supervisors:s, supScope:{ ...S.cfg.supScope, [d.release]:secOf(d.release) ? [secOf(d.release)] : 'all' } }); await updateDoc(doc(fdb, 'players', d.release), { supRequest:false }); audit('Liberou acesso de supervisão', nm(d.release)); toast(`${nm(d.release)} liberado no acesso ${i + 1}, cuidando do time ${tName(secOf(d.release))}. Marque outros times em Acessos, se precisar.`); });
   if (d.deny) return guard(async () => { await updateDoc(doc(fdb, 'players', d.deny), { supRequest:false }); audit('Recusou pedido de supervisão', nm(d.deny)); toast('Pedido recusado.'); });
   if (d.slot !== undefined && d.pid) return guard(async () => { const s = S.cfg.supervisors.map(x => x === d.pid ? null : x); s[+d.slot] = d.pid;
-    await cfgWrite({ supervisors:s, supScope:{ ...S.cfg.supScope, [d.pid]:(S.cfg.supScope || {})[d.pid] || secOf(d.pid) || 'all' } }); if (S.players[d.pid] && S.players[d.pid].supRequest) await updateDoc(doc(fdb, 'players', d.pid), { supRequest:false }); audit('Definiu acesso de supervisão', `${nm(d.pid)} no acesso ${+d.slot + 1}`); toast(`${nm(d.pid)} agora é o acesso ${+d.slot + 1}.`); });
+    await cfgWrite({ supervisors:s, supScope:{ ...S.cfg.supScope, [d.pid]:(S.cfg.supScope || {})[d.pid] || (secOf(d.pid) ? [secOf(d.pid)] : 'all') } }); if (S.players[d.pid] && S.players[d.pid].supRequest) await updateDoc(doc(fdb, 'players', d.pid), { supRequest:false }); audit('Definiu acesso de supervisão', `${nm(d.pid)} no acesso ${+d.slot + 1}`); toast(`${nm(d.pid)} agora é o acesso ${+d.slot + 1}.`); });
   if (d.unslot !== undefined) return guard(async () => { const s = [...S.cfg.supervisors]; const who = s[+d.unslot]; s[+d.unslot] = null; const sc = { ...S.cfg.supScope }; delete sc[who]; await cfgWrite({ supervisors:s, supScope:sc }); audit('Removeu acesso de supervisão', nm(who)); toast('Acesso liberado.'); });
   if (d.reset && S.owner) {
     const label = 'do time ' + tName(d.reset);
@@ -1580,7 +1588,15 @@ document.addEventListener('change', e => {
   if (t.id === 'invFile' && t.files[0]) { importInvites(t.files[0]); t.value = ''; return; }
   if (t.id === 'bkFile' && t.files[0]) { backupRead(t.files[0]); return; }
   if (t.id === 'inviteOnly' && S.owner) { const v = t.checked; guard(async () => { await cfgWrite({ inviteOnly:v }); audit(v ? 'Ativou cadastro só para autorizados' : 'Liberou cadastro para todos', ''); toast(v ? 'Agora só quem está na lista consegue se cadastrar.' : 'Cadastro liberado para qualquer pessoa com o link.'); }); return; }
-  if (d.scope && S.owner) { const v = t.value; guard(async () => { await cfgWrite({ supScope:{ ...S.cfg.supScope, [d.scope]:v } }); audit('Alterou times do supervisor', `${nm(d.scope)}: ${v === 'all' ? 'todos os times' : tName(v)}`); toast(`${nm(d.scope)} agora cuida de ${v === 'all' ? 'todos os times' : 'o time ' + tName(v)}.`); }); return; }
+  if ((d.scopeall || d.scopeteam) && S.owner) {
+    const uid = d.scopeall || d.scopeteam;
+    let v;
+    if (d.scopeall) v = t.checked ? 'all' : (secOf(uid) ? [secOf(uid)] : [activeTeams()[0]]);
+    else v = [...document.querySelectorAll(`[data-scopeteam="${uid}"]:checked`)].map(x => x.value);
+    if (Array.isArray(v) && !v.length) { t.checked = true; return toast('Marque pelo menos um time, ou "Todos os times".'); }
+    guard(async () => { await cfgWrite({ supScope:{ ...S.cfg.supScope, [uid]:v } }); audit('Alterou times do supervisor', `${nm(uid)}: ${scopeLabel(v)}`); toast(`${nm(uid)} agora cuida de ${scopeLabel(v)}.`); });
+    return;
+  }
   if (d.move) { const p = S.players[d.move]; guard(async () => { await updateDoc(doc(fdb, 'players', d.move), { sector:t.value }); audit('Mudou colaborador de time', `${nm(d.move)}: ${tName(p && p.sector)} → ${tName(t.value)}`); toast('Time atualizado.'); }); }
 });
 document.addEventListener('input', e => {
@@ -1646,7 +1662,7 @@ document.addEventListener('submit', e => {
       const secs = [...new Set(ids.map(id => S.players[id].sector))];
       sector = secs.length === 1 ? secs[0] : 'ambos'; audience = ids.map(id => 'uid:' + id);
     } else { sector = $('#tSector').value; audience = sector === 'ambos' ? ['sec:all'] : ['sec:' + sector]; }
-    if (!canEdit(sector)) return toast('Você só pode criar tarefas para o time ' + tName(myScope()) + '.');
+    if (!canEdit(sector)) return toast(sector === 'ambos' && S.tMode === 'pessoas' ? 'Escolha pessoas de um time só, ou crie uma tarefa para cada time.' : 'Você só pode criar tarefas para ' + scopeLabel(myScope()) + '.');
     const data = { title, desc:$('#tDesc').value.trim(), reward, sector, audience, deadlineAt, recur:recur || '', proof:$('#tProof').checked, repeat:!recur && $('#tRepeat').checked, active:$('#tActive').checked, updatedAt:now(), updatedBy:S.me };
     if (S.editingTask) { await updateDoc(doc(fdb, 'tasks', S.editingTask), data); audit('Editou tarefa', title); toast('Tarefa atualizada.'); }
     else { await addDoc(collection(fdb, 'tasks'), { ...data, createdAt:now() }); audit('Criou tarefa', `${title} · +${reward} · para ${S.tMode === 'pessoas' ? audience.length + ' pessoa(s)' : tName(sector)}${recur ? ' · ' + RECUR_LAB[recur].toLowerCase() : ''}`); toast('Tarefa publicada.'); }
@@ -1657,7 +1673,7 @@ document.addEventListener('submit', e => {
     if (!name || !(cost > 0)) return toast('Informe o nome e um custo maior que zero.');
     const data = { name, desc:$('#fDesc').value.trim(), emoji:$('#fEmoji').value.trim() || '🎁', cost, stock:st === '' ? null : Math.max(0, parseInt(st, 10) || 0),
       sector:$('#fSector').value, active:$('#fActive').checked, image:safeImg(S.formImg), updatedAt:now(), updatedBy:S.me };
-    if (!canEdit(data.sector)) return toast('Você só pode cadastrar prêmios para o time ' + tName(myScope()) + '.');
+    if (!canEdit(data.sector)) return toast('Você só pode cadastrar prêmios para ' + scopeLabel(myScope()) + '.');
     if (S.editing) { await updateDoc(doc(fdb, 'items', S.editing), data); audit('Editou prêmio', `${name} · ${cost} moedas`); toast('Prêmio atualizado na loja.'); }
     else { await addDoc(collection(fdb, 'items'), { ...data, createdAt:now() }); audit('Criou prêmio', `${name} · ${cost} moedas · ${tName(data.sector)}`); toast('Prêmio adicionado à loja.'); }
     resetForm();
