@@ -375,7 +375,7 @@ if (!configured) {
   const app = initializeApp(FIREBASE_CONFIG);
   auth = getAuth(app); fdb = getFirestore(app);
   onAuthStateChanged(auth, u => {
-    stopAll(); resetState(); applyTeamStyles();
+    stopAll(); resetState(); applyTeamStyles(); clearTimeout(liveRetry.timer); liveRetry = { n:0, timer:null };
     $('#logout').hidden = !u; $('#viewBtn').hidden = true;
     if (!u) return showLogin();
     if (ALLOWED_EMAIL_DOMAINS.length && !ALLOWED_EMAIL_DOMAINS.some(d => (u.email || '').toLowerCase().endsWith('@' + d.toLowerCase()))) {
@@ -400,7 +400,9 @@ if (!configured) {
     base.push(onSnapshot(doc(fdb, 'config', 'notice'), s => { S.notice = s.exists() ? s.data() : null; changed(); }, e => console.error(e)));
     base.push(onSnapshot(doc(fdb, 'config', 'teamScores'), s => { S.teamScores = s.exists() ? s.data() : null; changed(); }, e => console.error(e)));
     base.push(onSnapshot(query(collection(fdb, 'seasons'), orderBy('endedAt', 'desc'), limit(12)), q => { S.seasons = q.docs.map(d => ({ id:d.id, ...d.data() })); changed(); }, e => console.error(e)));
-    base.push(onSnapshot(doc(fdb, 'players', S.me), s => {
+    base.push(onSnapshot(doc(fdb, 'players', S.me), { includeMetadataChanges:true }, s => {
+      // Espera o banco confirmar o cadastro antes de abrir a loja (evita recusa logo após criar a conta)
+      if (s.metadata && s.metadata.hasPendingWrites) return;
       S.mine = s.exists() ? { id:s.id, ...s.data() } : null;
       if (S.mine) {
         S.players[S.me] = S.mine;
@@ -415,13 +417,24 @@ if (!configured) {
   });
 }
 
+/* Se o banco recusar uma leitura logo depois de uma mudança de acesso (cadastro novo, troca de time,
+   liberação de supervisor), tenta de novo algumas vezes antes de mostrar o erro. */
+let liveRetry = { n:0, timer:null };
+function onLiveErr(e){
+  console.error(e);
+  if (e && e.code === 'permission-denied' && liveRetry.n < 4) {
+    if (!liveRetry.timer) liveRetry.timer = setTimeout(() => { liveRetry.timer = null; liveRetry.n++; liveKey = ''; resub(); }, 800 * (liveRetry.n + 1));
+    return;
+  }
+  onErr(e);
+}
 function onErr(e){
   console.error(e);
   if (e && e.code === 'permission-denied') notice('O banco recusou o acesso. Confira se as regras do arquivo firestore.rules foram publicadas no Firebase e se o seu UID está nelas.');
   else toast('Falha de conexão com o banco. Verifique a internet e recarregue a página.');
 }
 
-const list = (q, fn, soft) => live.push(onSnapshot(q, snap => { fn(snap.docs.map(d => ({ id:d.id, ...d.data() }))); changed(); }, soft ? (e => console.error(e)) : onErr));
+const list = (q, fn, soft) => live.push(onSnapshot(q, snap => { liveRetry.n = 0; fn(snap.docs.map(d => ({ id:d.id, ...d.data() }))); changed(); }, soft ? (e => console.error(e)) : onLiveErr));
 const mergeBy = (...arrs) => { const m = new Map(); arrs.flat().forEach(x => m.set(x.id, x)); return [...m.values()].sort(byAtDesc); };
 function mergeSubs(){ S.subs = mergeBy(S.subsPend, S.subsRecent); }
 function mergeReds(){ S.reds = mergeBy(S.redsOpen, S.redsRecent); }
