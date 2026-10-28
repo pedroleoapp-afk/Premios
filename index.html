@@ -89,6 +89,12 @@ nav.tabs button[aria-current="true"]{background:var(--blue);color:var(--blue-ink
 .badge.locked{opacity:.45;filter:grayscale(1)}
 .teamrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
 .teamrow:last-child{border-bottom:0}
+.filterbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filterbar .subnav{margin:0}
+.filterbar .in{max-width:260px}
+.list li.grouphead{border:0;padding:16px 2px 6px;display:flex;gap:8px;align-items:center}
+.list li.grouphead:first-child{padding-top:2px}
+.list li.grouphead + li{border-top:0}
 .wish{background:var(--surface2);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:14px}
 .sector-tag.ambos{background:var(--surface2);color:var(--muted)}
 @media (max-width:560px){.hero{grid-template-columns:1fr;text-align:left}.coin.big{width:84px;height:84px;font-size:44px}}
@@ -268,7 +274,7 @@ function resetState(){
     editing:null, formImg:null, editingTask:null, tMode:'setor', tSel:new Set(), tFind:'',
     openTask:null, draft:{ note:'', image:null }, reasons:{}, obs:{}, names:{}, muralDraft:null, bonus:{},
     confirmId:null, confirmDel:null, confirmTDel:null, confirmRp:null, confirmBlock:null, confirmInv:null,
-    progressTask:null, progressSubs:[], kpi:null, kpiLoading:false, pFind:'', selSubs:new Set(),
+    progressTask:null, progressSubs:[], kpi:null, kpiLoading:false, pFind:'', accTeam:'all', accFind:'', colTeam:'all', selSubs:new Set(),
     newItems:new Set(), newTasks:new Set(), busy:false, loaded:false, emailFixing:false, joinSector:null,
     newTeamColor:4, teamDraft:{}, restore:null, kudoDraft:{ to:'', msg:'' }
   });
@@ -956,7 +962,8 @@ function buildSup(){
       <p class="hint" style="font-size:13px;margin:10px 0 0">O time novo aparece na hora no cadastro, nas lojas, nas tarefas e no ranking. Não precisa mexer no código nem nas regras do Firebase.</p></form>
     <section class="panel"><h3>Times cadastrados</h3><ul class="list" id="teamList"></ul>
       <p class="hint" style="font-size:13px;margin-top:12px">Desativar um time tira ele do cadastro e das listas. Quem já está nele continua com acesso, e você pode mudar essas pessoas de time em Colaboradores.</p></section></div>`;
-  if (S.sub === 'colab') h += `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Lista de colaboradores autorizados</h3><span class="hint" id="invCount"></span></div>
+  if (S.sub === 'colab') h += `<div class="filterbar"><div class="subnav" id="colChips"></div><input class="in" id="pFind" placeholder="Buscar por nome ou e-mail" value="${esc(S.pFind)}" aria-label="Buscar colaborador"></div>
+    <section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Lista de colaboradores autorizados</h3><span class="hint" id="invCount"></span></div>
       <label class="check" style="margin-top:0"><input type="checkbox" id="inviteOnly" ${S.cfg.inviteOnly ? 'checked' : ''}> Só quem está na lista pode se cadastrar</label>
       <p class="hint" style="font-size:13px;margin:6px 0 12px">Quem está na lista entra direto no time certo no primeiro login, sem escolher. Use o mesmo e-mail que a pessoa vai usar para entrar.</p>
       <form id="invForm" class="row" autocomplete="off" style="align-items:flex-end">
@@ -966,10 +973,11 @@ function buildSup(){
         <button class="btn" type="submit" style="flex:none">Adicionar</button></form>
       <div class="row" style="margin-top:12px"><input type="file" id="invFile" accept=".csv,text/csv" class="sr"><label for="invFile" class="btn ghost sm" style="flex:none" tabindex="0" id="invFileBtn">Importar planilha (.csv)</label><button class="btn ghost sm" id="invTemplate" style="flex:none">Baixar modelo</button></div>
       <ul class="list" id="invList" style="margin-top:10px;max-height:340px;overflow:auto"></ul></section>
-    <section class="panel" style="margin-top:18px"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Colaboradores cadastrados</h3><input class="in" id="pFind" placeholder="Buscar por nome ou e-mail" value="${esc(S.pFind)}" style="max-width:280px"></div>
+    <section class="panel" style="margin-top:18px"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Colaboradores cadastrados</h3><span class="hint" id="colCount"></span></div>
     <ul class="list" id="colabList"></ul>
     <p class="hint" style="font-size:13px;margin-top:14px">Por segurança, o Firebase não permite ver ou definir a senha de outra pessoa pela página. "Redefinir senha" envia ao colaborador um e-mail para ele criar uma nova. Para apagar o login de vez, use o console do Firebase: Authentication › Usuários › menu ⋮ › Excluir conta.</p></section>`;
-  if (S.sub === 'acessos') h += `<div class="cols"><section class="panel"><h3>Os ${NSUP} acessos de supervisão</h3>
+  if (S.sub === 'acessos') h += `<div class="filterbar"><div class="subnav" id="accChips"></div>${S.owner ? `<input class="in" id="accFind" placeholder="Buscar por nome" value="${esc(S.accFind)}" aria-label="Buscar pessoa">` : ''}</div>
+    <div class="cols"><section class="panel"><h3>Os ${NSUP} acessos de supervisão</h3>
       <p class="hint" style="margin-top:-4px">Cada supervisor pode cuidar de todos os times ou só dos times marcados. Ele só cria, credita e aprova coisas dos times dele. Só o administrador acessa Times, Colaboradores e Acessos.${S.owner ? '' : ' Só o administrador altera esta lista.'}</p><div id="slots"></div></section>
     ${S.owner ? `<section class="panel"><h3>Pedidos de acesso</h3><ul class="list" id="reqList"></ul>
       <h3 style="margin-top:22px">Liberar para pessoa cadastrada</h3><ul class="list" id="peopleList"></ul></section>` : ''}</div>`;
@@ -1168,44 +1176,71 @@ function fillTeams(){
       <button class="btn ${off ? 'ok' : 'bad'} sm" style="flex:none" data-tactive="${esc(k)}">${off ? 'Reativar' : 'Desativar'}</button></li>`; }).join('');
 }
 
+/* Filtro e divisão por time (Acessos e Colaboradores) */
+function teamChips(boxId, kind, sel, countOf){
+  const box = document.getElementById(boxId); if (!box) return;
+  const keys = teamKeys().filter(k => S.teams[k].active !== false || countOf(k) > 0);
+  const total = keys.reduce((s, k) => s + countOf(k), 0);
+  box.innerHTML = `<button data-fteam="${kind}" data-k="all" aria-current="${sel === 'all'}">Todos os times <span class="hint">${total}</span></button>`
+    + keys.map(k => `<button data-fteam="${kind}" data-k="${esc(k)}" aria-current="${sel === k}">${esc(tName(k))} <span class="hint">${countOf(k)}</span></button>`).join('');
+}
+function groupByTeam(list, keyOf, row, empty, sel){
+  const known = new Set(teamKeys());
+  const keys = teamKeys().filter(k => sel === 'all' || k === sel);
+  let html = keys.map(k => { const g = list.filter(x => keyOf(x) === k); return g.length ? `<li class="grouphead">${tTag(k)}<span class="hint" style="font-size:13px">${g.length} ${g.length === 1 ? 'pessoa' : 'pessoas'}</span></li>` + g.map(row).join('') : ''; }).join('');
+  const orphan = sel === 'all' ? list.filter(x => !known.has(keyOf(x))) : [];
+  if (orphan.length) html += `<li class="grouphead"><span class="sector-tag ambos">Sem time</span></li>` + orphan.map(row).join('');
+  return html || `<li class="empty">${empty}</li>`;
+}
+const matchFind = (q, ...vals) => !q || vals.some(v => norm(v).includes(norm(q)));
+
 /* Colaboradores autorizados (administrador) */
 function fillInvites(){
   const emails = new Set(Object.values(S.players).map(p => lowerEmail(p.email)));
   const done = S.invites.filter(i => emails.has(lowerEmail(i.email))).length;
   $('#invCount').textContent = S.invites.length ? `${S.invites.length} na lista · ${done} já ${done === 1 ? 'entrou' : 'entraram'}` : '';
-  $('#invList').innerHTML = S.invites.length ? S.invites.map(i => `<li><div class="grow"><div class="t">${esc(i.name)}</div><div class="s">${esc(i.email)} · ${esc(tName(i.sector))}</div></div>
+  const inv = S.invites.filter(i => matchFind(S.pFind, i.name, i.email));
+  const row = i => `<li><div class="grow"><div class="t">${esc(i.name)}</div><div class="s">${esc(i.email)}</div></div>
     <span class="status ${emails.has(lowerEmail(i.email)) ? 'aprovada' : 'pendente'}">${emails.has(lowerEmail(i.email)) ? 'Cadastrado' : 'Aguardando'}</span>
-    <button class="btn bad sm" style="flex:none" data-invdel="${esc(i.id)}" ${S.confirmInv === i.id ? 'data-confirm="1"' : ''}>${S.confirmInv === i.id ? 'Confirmar' : 'Remover'}</button></li>`).join('')
-    : '<li class="empty">Nenhum e-mail na lista. Adicione um por um ou importe uma planilha.</li>';
+    <button class="btn bad sm" style="flex:none" data-invdel="${esc(i.id)}" ${S.confirmInv === i.id ? 'data-confirm="1"' : ''}>${S.confirmInv === i.id ? 'Confirmar' : 'Remover'}</button></li>`;
+  $('#invList').innerHTML = S.invites.length ? groupByTeam(inv, i => i.sector, row, 'Ninguém da lista corresponde ao filtro.', S.colTeam) : '<li class="empty">Nenhum e-mail na lista. Adicione um por um ou importe uma planilha.</li>';
 }
 function fillColab(){
-  const q = S.pFind.toLowerCase(), sups = supIds();
-  const ps = Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id) && (nm(p.id).toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q))).sort((a, b) => (!!a.blocked - !!b.blocked) || nm(a.id).localeCompare(nm(b.id)));
-  $('#colabList').innerHTML = ps.length ? ps.map(p => `<li style="flex-wrap:wrap">
+  const sups = supIds();
+  const everyone = Object.values(S.players).filter(p => !ADMIN_UIDS.includes(p.id));
+  const ps = everyone.filter(p => matchFind(S.pFind, nm(p.id), p.email)).sort((a, b) => (!!a.blocked - !!b.blocked) || nm(a.id).localeCompare(nm(b.id)));
+  teamChips('colChips', 'col', S.colTeam, k => everyone.filter(p => p.sector === k).length + S.invites.filter(i => i.sector === k && !everyone.some(p => lowerEmail(p.email) === lowerEmail(i.email))).length);
+  const shown = ps.filter(p => S.colTeam === 'all' || p.sector === S.colTeam).length;
+  $('#colCount').textContent = `${shown} ${shown === 1 ? 'pessoa' : 'pessoas'}`;
+  const row = p => `<li style="flex-wrap:wrap">
     <div class="grow" style="min-width:200px"><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="in sm" data-cname="${p.id}" id="cn_${p.id}" value="${esc(S.names[p.id] ?? p.name ?? '')}" maxlength="60" aria-label="Nome" style="flex:1 1 140px"><button class="btn ghost sm" style="flex:none" data-rename="${p.id}">Salvar</button></div>
       <div class="s" style="margin-top:4px">${esc(p.email || 'e-mail ainda não registrado')}${sups.includes(p.id) ? '<span class="tag-role">Supervisão</span>' : ''}${p.blocked ? '<span class="tag-role blocked">Removido</span>' : ''} · saldo ${fmt(bal(p.id))}</div></div>
     <select class="in sm" style="width:auto;flex:none" data-move="${p.id}" aria-label="Time de ${esc(nm(p.id))}">${teamOptions(teamKeys().filter(k => S.teams[k].active !== false || k === p.sector), p.sector)}</select>
     <button class="btn ghost sm" style="flex:none" data-pwd="${p.id}" ${p.email ? '' : 'disabled'}>Redefinir senha</button>
-    <button class="btn ${p.blocked ? 'ok' : 'bad'} sm" style="flex:none" data-block="${p.id}" ${S.confirmBlock === p.id ? 'data-confirm="1"' : ''}>${S.confirmBlock === p.id ? 'Confirmar' : p.blocked ? 'Reativar' : 'Remover acesso'}</button></li>`).join('')
-    : '<li class="empty">Nenhum colaborador encontrado.</li>';
+    <button class="btn ${p.blocked ? 'ok' : 'bad'} sm" style="flex:none" data-block="${p.id}" ${S.confirmBlock === p.id ? 'data-confirm="1"' : ''}>${S.confirmBlock === p.id ? 'Confirmar' : p.blocked ? 'Reativar' : 'Remover acesso'}</button></li>`;
+  $('#colabList').innerHTML = groupByTeam(ps, p => p.sector, row, S.pFind || S.colTeam !== 'all' ? 'Ninguém corresponde ao filtro.' : 'Nenhum colaborador cadastrado ainda.', S.colTeam);
 }
 
 /* Acessos */
 function fillAccess(){
-  $('#slots').innerHTML = [...Array(NSUP).keys()].map(i => { const id = S.cfg.supervisors[i], scope = id ? scopeOf(id) : 'all';
+  const sups = supIds(), all = activePlayers(), f = S.accTeam;
+  const others = all.filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id));
+  teamChips('accChips', 'acc', f, k => others.filter(p => p.sector === k).length + sups.filter(id => (S.players[id] || {}).sector === k).length);
+  const covers = id => { const sc = scopeOf(id); return f === 'all' || sc === 'all' || sc.includes(f); };
+  $('#slots').innerHTML = [...Array(NSUP).keys()].filter(i => !S.cfg.supervisors[i] || covers(S.cfg.supervisors[i])).map(i => { const id = S.cfg.supervisors[i], scope = id ? scopeOf(id) : 'all';
     const keys = teamKeys().filter(k => S.teams[k].active !== false || (scope !== 'all' && scope.includes(k)));
     const picker = id && S.owner ? `<div class="swatches" style="margin-top:8px;gap:6px 14px;width:100%">
         <label class="check" style="margin:0"><input type="checkbox" data-scopeall="${id}" ${scope === 'all' ? 'checked' : ''}> Todos os times</label>
         ${keys.map(k => `<label class="check" style="margin:0"><input type="checkbox" data-scopeteam="${id}" value="${esc(k)}" ${scope === 'all' || scope.includes(k) ? 'checked' : ''} ${scope === 'all' ? 'disabled' : ''}> ${esc(tName(k))}</label>`).join('')}</div>` : '';
-    return `<div class="slot" style="flex-wrap:wrap"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow" style="min-width:140px">${id ? `<b>${esc(nm(id))}</b>${S.owner ? '' : `<div class="hint" style="font-size:13px">${esc(scopeLabel(scope))}</div>`}` : '<span class="hint">Acesso livre</span>'}</div>
+    return `<div class="slot" style="flex-wrap:wrap"><span class="pos ${id ? 'p1' : ''}">${i + 1}</span><div class="grow" style="min-width:140px">${id ? `<b>${esc(nm(id))}</b> ${S.players[id] ? tTag(S.players[id].sector) : ''}${S.owner ? '' : `<div class="hint" style="font-size:13px">Cuida de ${esc(scopeLabel(scope))}</div>`}` : '<span class="hint">Acesso livre</span>'}</div>
     ${id && S.owner ? `<button class="btn bad sm" style="flex:none" data-unslot="${i}">Remover</button>` : ''}${picker}</div>`; }).join('');
+  if (!$('#slots').innerHTML.trim()) $('#slots').innerHTML = '<p class="empty">Nenhum supervisor cuida deste time.</p>';
   if (!S.owner) return;
-  const sups = supIds(), all = activePlayers();
   const reqs = all.filter(p => p.supRequest && !sups.includes(p.id));
-  $('#reqList').innerHTML = reqs.length ? reqs.map(p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${esc(tName(p.sector))} · pediu acesso de supervisão</div></div>
-    <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`).join('') : '<li class="empty">Nenhum pedido no momento.</li>';
-  const others = all.filter(p => !sups.includes(p.id) && !ADMIN_UIDS.includes(p.id));
-  $('#peopleList').innerHTML = others.length ? others.map(p => `<li style="flex-wrap:wrap"><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">${esc(tName(p.sector))}</div></div><div class="row" style="gap:6px;flex:none">${[...Array(NSUP).keys()].map(i => `<button class="btn ghost sm" style="flex:none" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</div></li>`).join('') : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
+  $('#reqList').innerHTML = reqs.length ? groupByTeam(reqs, p => p.sector, p => `<li><div class="grow"><div class="t">${esc(nm(p.id))}</div><div class="s">pediu acesso de supervisão</div></div>
+    <button class="btn ok sm" data-release="${p.id}">Liberar</button><button class="btn bad sm" data-deny="${p.id}">Recusar</button></li>`, 'Nenhum pedido deste time.', f) : '<li class="empty">Nenhum pedido no momento.</li>';
+  const list = others.filter(p => matchFind(S.accFind, nm(p.id), p.email));
+  $('#peopleList').innerHTML = others.length ? groupByTeam(list, p => p.sector, p => `<li style="flex-wrap:wrap"><div class="grow"><div class="t">${esc(nm(p.id))}</div></div><div class="row" style="gap:6px;flex:none">${[...Array(NSUP).keys()].map(i => `<button class="btn ghost sm" style="flex:none" data-slot="${i}" data-pid="${p.id}">Acesso ${i + 1}</button>`).join('')}</div></li>`, 'Ninguém corresponde ao filtro.', f) : '<li class="empty">Quem se cadastrar aparece aqui.</li>';
 }
 
 /* ---------- Ações ---------- */
@@ -1504,6 +1539,7 @@ document.addEventListener('click', async e => {
   if (d.sub) { if (S.sub !== d.sub) closeProgress(); S.sub = d.sub; return build(); }
   if (d.pick) { S.joinSector = d.pick; document.querySelectorAll('[data-pick]').forEach(x => x.setAttribute('aria-pressed', x.dataset.pick === d.pick)); return; }
   if (d.prev) { S.preview = d.prev; return fill(); }
+  if (d.fteam) { if (d.fteam === 'acc') { S.accTeam = d.k; return fillAccess(); } S.colTeam = d.k; fillInvites(); return fillColab(); }
   if (d.wish !== undefined) return guard(async () => { await updateDoc(doc(fdb, 'players', S.me), { wish:d.wish || null }); toast(d.wish ? 'Meta definida! Acompanhe o progresso no topo da loja.' : 'Meta removida.'); });
   if (d.buy) { if (d.confirm) return buy(d.buy); S.confirmId = d.buy; fillStore(); setTimeout(() => { if (S.confirmId === d.buy) { S.confirmId = null; if (S.tab === 'loja') fillStore(); } }, 5000); return; }
   if (d.open) { S.openTask = d.open; S.draft = { note:'', image:null }; fillTasks(); const n = $('#sNote'); if (n) n.focus(); return; }
@@ -1615,7 +1651,8 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === 'tFind') { S.tFind = t.value; fillPeoplePick(); }
-  if (t.id === 'pFind') { S.pFind = t.value; fillColab(); }
+  if (t.id === 'pFind') { S.pFind = t.value; fillInvites(); fillColab(); }
+  if (t.id === 'accFind') { S.accFind = t.value; fillAccess(); }
   if (t.id === 'sNote') S.draft.note = t.value;
   if (t.id === 'kMsg') S.kudoDraft.msg = t.value;
   if (t.id === 'muralText') S.muralDraft = t.value;
