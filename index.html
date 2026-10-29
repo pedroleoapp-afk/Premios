@@ -676,7 +676,7 @@ function build(){
     <div class="cols" style="margin-top:18px"><section class="panel"><h3>Extrato</h3><ul class="list" id="myLedger"></ul></section>
     <section class="panel"><h3>Meus resgates</h3><ul class="list" id="myReds"></ul></section></div>`;
   if (S.tab === 'ranking') M.innerHTML = pre + `<section class="panel"><div class="section-head" style="margin-top:0"><h3 style="margin:0">Placar dos times</h3><span class="hint">Moedas ganhas na temporada por cada time</span></div><div id="teamBoard"></div></section>
-    <div class="section-head" style="margin-top:26px"><h2 id="rankTitle"></h2><span class="hint">Moedas ganhas na temporada, sem descontar as trocas.</span></div><div class="rank" id="rank"></div>
+    ${isSup() && !S.viewAs ? `<div class="section-head" style="margin-top:26px"><h2 id="rankTitle"></h2><span class="hint">🔒 Visível só para a gestão. Os colaboradores veem apenas o placar dos times.</span></div><div class="rank" id="rank"></div>` : ''}
     <div class="section-head" style="margin-top:30px"><h2>Temporadas anteriores</h2></div><div id="seasonsBox"></div>`;
   if (S.tab === 'sup') buildSup();
   fill();
@@ -794,8 +794,8 @@ function myBadges(){
   const kin = S.kudos.filter(k => k.to === S.me && k.status === 'aprovado').length;
   const kout = S.kudos.filter(k => k.from === S.me && k.status === 'aprovado').length;
   const weeks = new Set(ok.map(x => weekOf(x.doneAt || x.at))).size;
-  const myName = (me() && me().name) || '';
-  const podium = S.seasons.filter(se => Object.values(se.ranking || {}).some(arr => (arr || []).slice(0, 3).some(r => r.id ? r.id === S.me : r.name === myName))).length;
+  const mySec = me() && me().sector;
+  const champ = S.seasons.filter(se => { const t = Object.entries(se.teams || {}).filter(([k, v]) => v && v.total > 0).sort((a, b) => b[1].total - a[1].total); return t.length && t[0][0] === mySec; }).length;
   return [
     { ic:'🎯', name:'Primeira tarefa', desc:'1 tarefa aprovada', goal:1, val:ok.length },
     { ic:'🏅', name:'Mão na massa', desc:'5 tarefas aprovadas', goal:5, val:ok.length },
@@ -805,7 +805,7 @@ function myBadges(){
     { ic:'🎁', name:'Primeira troca', desc:'1 prêmio resgatado', goal:1, val:reds.length },
     { ic:'💜', name:'Reconhecido', desc:'Recebeu um reconhecimento', goal:1, val:kin },
     { ic:'🤝', name:'Parceiro de equipe', desc:'3 reconhecimentos dados e aprovados', goal:3, val:kout },
-    { ic:'🏆', name:'Pódio', desc:'Top 3 do time em uma temporada', goal:1, val:podium }
+    { ic:'🏆', name:'Time campeão', desc:'Seu time terminou uma temporada em 1º lugar', goal:1, val:champ }
   ];
 }
 
@@ -850,15 +850,22 @@ function fillRank(){
     <div class="bar team t-${esc(r.k)}"><i style="width:${Math.round(100 * r.total / max)}%;background:var(--c)"></i></div></div>
     <span class="price" style="font-size:18px">${coin}${fmt(r.total)}</span></div>`).join('')
     : '<p class="empty">O placar aparece quando os times começarem a ganhar moedas.</p>';
-  const secs = isSup() && !S.viewAs ? activeTeams() : [viewSector()];
-  $('#rankTitle').textContent = 'Ranking · ' + seasonLabel();
+  const mgmt = isSup() && !S.viewAs, secs = activeTeams();
+  if (mgmt) {
+  $('#rankTitle').textContent = 'Ranking individual · ' + seasonLabel();
   $('#rank').innerHTML = secs.map(k => {
     const ps = Object.values(S.players).filter(p => p.sector === k && !p.blocked && earned(p.id) > 0).sort((a, b) => earned(b.id) - earned(a.id)).slice(0, 10);
     return `<section class="panel"><h3>${tTag(k)}</h3><ul class="list">${ps.length ? ps.map((p, i) => `<li><span class="pos ${i === 0 ? 'p1' : ''}">${i + 1}</span><div class="grow t">${esc(nm(p.id))}</div><span class="price" style="font-size:18px">${coin}${fmt(earned(p.id))}</span></li>`).join('') : '<li class="empty">Ninguém pontuou ainda neste time.</li>'}</ul></section>`;
   }).join('');
-  $('#seasonsBox').innerHTML = S.seasons.length ? `<div class="rank">${S.seasons.map(se => `<section class="panel"><h3>${esc(se.name)}</h3><p class="hint" style="margin:-6px 0 8px;font-size:13px">${dateBR(se.startedAt)} a ${dateBR(se.endedAt)}</p>
-    ${secs.map(k => { const top = ((se.ranking || {})[k] || []).slice(0, 3); return `<div style="margin-top:8px">${tTag(k)}<div class="podium">${top.length ? top.map((r, i) => `<span>${['🥇', '🥈', '🥉'][i]} ${esc(r.name)} · ${fmt(r.earned)}</span>`).join('') : '<span>Sem pontuação</span>'}</div></div>`; }).join('')}</section>`).join('')}</div>`
-    : '<p class="empty">Quando a supervisão encerrar uma temporada, o pódio fica guardado aqui.</p>';
+  }
+  const medal = ['🥇', '🥈', '🥉'];
+  $('#seasonsBox').innerHTML = S.seasons.length ? `<div class="rank">${S.seasons.map(se => {
+    const teams = Object.entries(se.teams || {}).filter(([k, v]) => v && v.total > 0).sort((a, b) => b[1].total - a[1].total);
+    const teamHtml = teams.length ? `<div class="podium">${teams.map(([k, v], i) => `<span>${medal[i] || (i + 1) + 'º'} ${esc(tName(k))} · ${fmt(v.total)}</span>`).join('')}</div>` : '<p class="hint" style="font-size:13px;margin:4px 0 0">Placar dos times não registrado nesta temporada.</p>';
+    const people = mgmt ? secs.map(k => { const top = ((se.ranking || {})[k] || []).slice(0, 3); return top.length ? `<div style="margin-top:8px">${tTag(k)}<div class="podium">${top.map((r, i) => `<span>${medal[i]} ${esc(r.name)} · ${fmt(r.earned)}</span>`).join('')}</div></div>` : ''; }).join('') : '';
+    return `<section class="panel"><h3>${esc(se.name)}</h3><p class="hint" style="margin:-6px 0 8px;font-size:13px">${dateBR(se.startedAt)} a ${dateBR(se.endedAt)}</p>
+      <b style="font-size:14px">Times</b>${teamHtml}${people ? `<p style="margin:14px 0 0"><b style="font-size:14px">Destaques individuais</b> <span class="hint" style="font-size:12px">🔒 só gestão</span></p>${people}` : ''}</section>`; }).join('')}</div>`
+    : '<p class="empty">Quando a supervisão encerrar uma temporada, o resultado dos times fica guardado aqui.</p>';
 }
 
 /* ---------- Supervisão ---------- */
@@ -929,7 +936,7 @@ function buildSup(){
       <button class="btn warn" type="submit" style="margin-top:16px">Creditar time</button>
     </form>
     ${S.owner ? `<section class="panel" style="margin-top:18px"><h3>Temporada</h3>
-      <p class="hint" style="margin-top:-4px;font-size:14px">Agora: <b>${esc(seasonLabel())}</b>${S.cfg.seasonStart ? ', desde ' + dateBR(S.cfg.seasonStart) : ''}. Ao encerrar, o pódio e o placar dos times são guardados, as moedas e o ranking de todos são zerados e cada prêmio pode ser resgatado de novo.</p>
+      <p class="hint" style="margin-top:-4px;font-size:14px">Agora: <b>${esc(seasonLabel())}</b>${S.cfg.seasonStart ? ', desde ' + dateBR(S.cfg.seasonStart) : ''}. Ao encerrar, o placar dos times e os destaques individuais (visíveis só para a gestão) são guardados, as moedas e o ranking de todos são zerados e cada prêmio pode ser resgatado de novo.</p>
       <label class="f" for="nextSeason">Nome da próxima temporada</label><input class="in" id="nextSeason" maxlength="40" placeholder="Ex.: Temporada Novembro">
       <button class="btn bad" id="endSeason" style="margin-top:12px">Encerrar temporada</button>
       <h3 style="margin-top:22px">Zerar só um time</h3>
